@@ -7,14 +7,17 @@
 <title>Rangkai — Editor Video</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Caveat:wght@700&family=Inter:wght@400;700&family=Montserrat:wght@800&family=Oswald:wght@600&family=Pacifico&family=Playfair+Display:wght@700&family=Poppins:wght@400;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Poppins:wght@400;700&family=Montserrat:wght@400;800&family=Roboto:wght@400;700&family=Lato:wght@400;700&family=Nunito:wght@400;800&family=Rubik:wght@400;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;700&family=Oswald:wght@400;600&family=Anton&family=Bebas+Neue&family=Archivo+Black&family=Playfair+Display:wght@400;700&family=Merriweather:wght@400;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Abril+Fatface&family=Lobster&family=Pacifico&family=Dancing+Script:wght@700&family=Satisfy&family=Caveat:wght@700&family=Shadows+Into+Light&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Permanent+Marker&family=Bangers&family=Righteous&family=Fredoka:wght@400;700&family=Comfortaa:wght@700&family=Press+Start+2P&family=Courier+Prime:wght@400;700&display=swap">
 <style>
 /* ============ TOKENS ============ */
 :root{
   --bg:#0d0e11; --surface:#17191e; --surface-2:#21242b; --surface-3:#2c3039;
   --line:#2f333c; --text:#f1f2f4; --text-dim:#9aa0ab; --text-faint:#646a76;
   --accent:#19d3c5; --accent-ink:#04201e; --danger:#ff5d6c; --warn:#ffc857;
-  --clip-video:#33507a; --clip-image:#5a4a86; --clip-text:#a2572f; --clip-audio:#1f6f5c; --clip-fx:#7a3f6b; --clip-ink:#ffffff;
+  --clip-video:#33507a; --clip-image:#5a4a86; --clip-text:#a2572f; --clip-audio:#1f6f5c; --clip-fx:#7a3f6b; --clip-sticker:#8a7a1f; --clip-ink:#ffffff;
   --lane:#14161a; --handle:#ffffff; --handle-ink:#17191e; --scrim:rgba(5,6,8,.72);
   --r-s:6px; --r-m:10px; --r-l:16px; --r-pill:999px;
   --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:24px;
@@ -103,6 +106,8 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:var(--r
 input[type=color]{width:38px;height:38px;border:0;padding:0;background:none;flex:none}
 textarea{width:100%;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r-m);padding:var(--sp-3);resize:none;min-height:64px}
 .row{display:flex;gap:var(--sp-2);align-items:center;flex-wrap:wrap}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(44px,1fr));gap:var(--sp-1)}
+.emo{height:var(--tap);font-size:26px;border-radius:var(--r-m);background:var(--surface-2)}
 .hint{font-size:var(--fs-xs);color:var(--text-faint);margin:0}
 .group-l{font-size:var(--fs-xs);color:var(--text-dim);text-transform:uppercase;letter-spacing:.06em;margin:0}
 
@@ -175,7 +180,7 @@ textarea{width:100%;background:var(--surface-2);border:1px solid var(--line);bor
 <script>
 'use strict';
 /* =====================================================================
-   Rangkai — editor video satu file. Tahap 2.
+   Rangkai — editor video satu file. Tahap 3.
    Bagian: util · state · riwayat · penyimpanan · media · pemutar ·
            WebGL · timeline · pratinjau · alat & panel · ekspor · boot
    ===================================================================== */
@@ -216,6 +221,9 @@ const ICONS = {
   filter: 'M4 10a5 5 0 1010 0a5 5 0 10-10 0M10 14a5 5 0 1010 0a5 5 0 10-10 0',
   adjust: 'M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1M15 4v4M9 10v4M17 16v4',
   crop: 'M7 3v14h14M3 7h14v14', kf: 'M12 3l7 9-7 9-7-9z', freeze: 'M12 3v18M4.5 7.5l15 9M19.5 7.5l-15 9',
+  sticker: 'M3 12a9 9 0 1018 0a9 9 0 10-18 0M8.5 14.5a4 4 0 007 0M9 9.5v.5M15 9.5v.5', anim: 'M3 12h4l2-6 4 12 2-6h6',
+  mask: 'M4 4h16v16H4zM8 12a4 4 0 108 0a4 4 0 10-8 0', blend: 'M4 4h11v11H4zM9 9h11v11H9z', chroma: 'M12 3l6 8a6 6 0 11-12 0z',
+  style: 'M4 20l5-14h2l5 14M6.5 14h7M17 8h4M19 6v4',
   reverse: 'M11 6l-6 6 6 6M19 6l-6 6 6 6', fx: 'M12 3l2 6 6 2-6 2-2 6-2-6-6-2 6-2z',
 };
 function ic(name) {
@@ -231,10 +239,10 @@ function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.ad
 
 /* ---------- state ---------- */
 const RATIOS = { '9:16': [9, 16], '16:9': [16, 9], '1:1': [1, 1], '4:5': [4, 5], '3:4': [3, 4], '21:9': [21, 9] };
-const FONTS = ['Inter', 'Poppins', 'Montserrat', 'Oswald', 'Bebas Neue', 'Playfair Display', 'Pacifico', 'Caveat'];
+const FONTS = ['Inter', 'Poppins', 'Montserrat', 'Roboto', 'Lato', 'Nunito', 'Rubik', 'Raleway', 'Oswald', 'Anton', 'Bebas Neue', 'Archivo Black', 'Playfair Display', 'Merriweather', 'Abril Fatface', 'Lobster', 'Pacifico', 'Dancing Script', 'Satisfy', 'Caveat', 'Shadows Into Light', 'Permanent Marker', 'Bangers', 'Righteous', 'Fredoka', 'Comfortaa', 'Press Start 2P', 'Courier Prime'];
 const PALETTE = ['#ffffff', '#000000', '#ffd23f', '#ff5d6c', '#19d3c5', '#4d8dff', '#b98cff', '#7bd66a', '#ff9f43'];
-const TYPE_ORDER = ['fx', 'text', 'overlay', 'main', 'audio'];   // urutan baris di timeline (atas ke bawah)
-const ROW_H = { fx: 26, text: 30, overlay: 44, main: 58, audio: 38 };
+const TYPE_ORDER = ['fx', 'text', 'sticker', 'overlay', 'main', 'audio'];   // urutan baris di timeline (atas ke bawah)
+const ROW_H = { fx: 26, text: 30, sticker: 30, overlay: 44, main: 58, audio: 38 };
 const RULER_H = 24, ROW_GAP = 5, MIN_DUR = 0.1, PEAK_RATE = 50;
 
 function newProject() {
@@ -248,7 +256,8 @@ function updateLogical() { const [a, b] = RATIOS[P().ratio]; const s = 1080 / Ma
 function duration() { let d = 0; for (const t of P().tracks) for (const c of t.clips) d = Math.max(d, c.start + c.dur); return d; }
 function findClip(id) { if (!id) return null; for (const track of P().tracks) { const clip = track.clips.find(c => c.id === id); if (clip) return { clip, track }; } return null; }
 const selClip = () => findClip(S.sel)?.clip || null;
-const isVisual = c => c.type === 'video' || c.type === 'image' || c.type === 'text';
+const isVisual = c => c.type === 'video' || c.type === 'image' || c.type === 'text' || c.type === 'sticker';
+const isMediaClip = c => c.type === 'video' || c.type === 'image';
 const hasMediaTime = c => c.type === 'video' || c.type === 'audio';
 const mediaOf = c => S.media.get(c.mediaId);
 
@@ -313,6 +322,47 @@ const TRANSITIONS = {   // f(p) → pengubah untuk klip keluar (a) dan klip masu
   iris: { n: 'Lingkaran', f: p => ({ b: { wipe: [5, p] } }) },
   spin: { n: 'Putar', f: p => { const e = eio(p); return { aTop: true, a: { rot: 140 * e, sc: 1 - .7 * e, op: 1 - e * e } }; } },
 };
+const BLENDS = [['normal', 'Normal'], ['multiply', 'Kali'], ['screen', 'Layar'], ['overlay', 'Overlay'], ['darken', 'Gelapkan'], ['lighten', 'Terangkan'], ['add', 'Tambah'], ['difference', 'Selisih'], ['softlight', 'Cahaya lembut']];
+const ANIM_IO = {      // f(p): p 0→1 saat masuk, 1→0 saat keluar
+  fade: { n: 'Pudar', f: p => ({ op: p }) },
+  slideUp: { n: 'Naik', f: p => ({ dy: (1 - EASE.out(p)) * .12, op: Math.min(1, p * 2) }) },
+  slideDown: { n: 'Turun', f: p => ({ dy: -(1 - EASE.out(p)) * .12, op: Math.min(1, p * 2) }) },
+  slideLeft: { n: 'Dari kanan', f: p => ({ dx: (1 - EASE.out(p)) * .35, op: Math.min(1, p * 2) }) },
+  slideRight: { n: 'Dari kiri', f: p => ({ dx: -(1 - EASE.out(p)) * .35, op: Math.min(1, p * 2) }) },
+  pop: { n: 'Pop', f: p => ({ sc: Math.max(.01, EASE.back(p)), op: Math.min(1, p * 3) }) },
+  bounce: { n: 'Pantul', f: p => ({ dy: -(1 - EASE.bounce(p)) * .35, op: Math.min(1, p * 4) }) },
+  zoom: { n: 'Zoom', f: p => ({ sc: 3 - 2 * EASE.out(p), op: p }) },
+  spin: { n: 'Putar', f: p => { const e = EASE.out(p); return { rot: (1 - e) * -200, sc: Math.max(.01, e), op: Math.min(1, p * 2) }; } },
+  blur: { n: 'Blur', f: p => ({ blur: (1 - p) * 40, op: p }) },
+  type: { n: 'Mesin tik', textOnly: true, f: p => ({ chars: p }) },
+};
+const ANIM_LOOP = {    // f(t): t = detik sejak klip mulai
+  pulse: { n: 'Denyut', f: t => ({ sc: 1 + .08 * Math.sin(t * 9.42) }) }, wiggle: { n: 'Goyang', f: t => ({ rot: 6 * Math.sin(t * 12.57) }) },
+  float: { n: 'Melayang', f: t => ({ dy: .015 * Math.sin(t * 5) }) }, blink: { n: 'Kedip', f: t => ({ op: .55 + .45 * Math.cos(t * 9.42) }) },
+  shake: { n: 'Getar', f: t => ({ dx: .006 * Math.sin(t * 71), dy: .006 * Math.cos(t * 53) }) }, spin: { n: 'Berputar', f: t => ({ rot: t * 180 }) },
+  swing: { n: 'Ayun', f: t => ({ rot: 14 * Math.sin(t * 3.77) }) },
+};
+function animMod(c, t) {
+  const a = c.anim; if (!a) return null; const lt = t - c.start, m = { op: 1, dx: 0, dy: 0, sc: 1, rot: 0, blur: 0, chars: 1 };
+  const add = x => { if (x.op != null) m.op *= x.op; m.dx += x.dx || 0; m.dy += x.dy || 0; if (x.sc != null) m.sc *= x.sc; m.rot += x.rot || 0; m.blur += x.blur || 0; if (x.chars != null) m.chars = Math.min(m.chars, x.chars); };
+  if (a.in && ANIM_IO[a.in.id]) { const d = Math.min(a.in.dur, c.dur); if (lt < d) add(ANIM_IO[a.in.id].f(clamp(lt / d, 0, 1))); }
+  if (a.out && ANIM_IO[a.out.id]) { const d = Math.min(a.out.dur, c.dur), rem = c.dur - lt; if (rem < d) add(ANIM_IO[a.out.id].f(clamp(rem / d, 0, 1))); }
+  if (a.loop && ANIM_LOOP[a.loop.id]) add(ANIM_LOOP[a.loop.id].f(lt));
+  return m;
+}
+const TEMPLATES = [
+  ['Judul tebal', { font: 'Anton', color: '#ffffff', weight: 400, ow: .08, oc: '#000000', sh: 0, bgo: 0, spacing: .02, size: .07 }, { in: { id: 'pop', dur: .5 } }],
+  ['Neon', { font: 'Righteous', color: '#7df9ff', weight: 400, ow: 0, sh: .9, shc: '#00c8ff', bgo: 0, spacing: .04, size: .06 }, { in: { id: 'fade', dur: .6 }, loop: { id: 'blink' } }],
+  ['Subjudul', { font: 'Poppins', color: '#ffffff', weight: 700, ow: 0, sh: 0, bgo: .65, bgc: '#000000', spacing: 0, size: .04 }, { in: { id: 'fade', dur: .3 }, out: { id: 'fade', dur: .3 } }],
+  ['Retro', { font: 'Bangers', color: '#ffd23f', weight: 400, ow: .07, oc: '#c81e3c', sh: .5, shc: '#000000', bgo: 0, spacing: .03, size: .07 }, { in: { id: 'bounce', dur: .7 } }],
+  ['Elegan', { font: 'Playfair Display', color: '#ffffff', weight: 700, ow: 0, sh: .3, shc: '#000000', bgo: 0, spacing: .18, size: .05 }, { in: { id: 'slideUp', dur: .8 }, out: { id: 'fade', dur: .5 } }],
+  ['Tulisan tangan', { font: 'Caveat', color: '#ffffff', weight: 700, ow: 0, sh: .3, shc: '#000000', bgo: 0, spacing: 0, size: .07 }, { in: { id: 'type', dur: 1.2 } }],
+  ['Kabar', { font: 'Oswald', color: '#ffffff', weight: 600, ow: 0, sh: 0, bgo: 1, bgc: '#d7263d', spacing: .02, size: .045 }, { in: { id: 'slideRight', dur: .5 } }],
+  ['Minimal', { font: 'Inter', color: '#ffffff', weight: 400, ow: 0, sh: 0, bgo: 0, spacing: .35, size: .03 }, { in: { id: 'blur', dur: .7 } }],
+  ['Stiker', { font: 'Fredoka', color: '#111111', weight: 700, ow: .1, oc: '#ffffff', sh: .4, shc: '#000000', bgo: 0, spacing: 0, size: .06 }, { in: { id: 'spin', dur: .6 }, loop: { id: 'wiggle' } }],
+];
+const EMOJI = '😀 😂 🥹 😍 😎 🤩 🥳 😭 😡 🤔 😴 🤯 👍 👎 👏 🙏 💪 👀 ❤️ 🔥 ✨ ⭐ 🎉 🎁 🎵 💯 ✅ ❌ ⚡ 💥 💬 💡 📍 📸 🎬 🏆 ☀️ 🌙 🌈 🌸 🍕 ☕ 🚀 ✈️ 🐱 🐶 👑 💎'.split(' ');
+const SHAPES = { circle: 'Lingkaran', rect: 'Kotak', tri: 'Segitiga', star: 'Bintang', heart: 'Hati', arrow: 'Panah', bubble: 'Balon', burst: 'Ledakan' };
 const FX = { glitch: 'Glitch', shake: 'Guncang', blur: 'Blur', rgb: 'RGB split', pulse: 'Zoom denyut', grain: 'Butiran film' };
 function trWindow(t) {   // transisi yang sedang berlangsung di trek utama pada waktu t
   const cs = mainTrack().clips;
@@ -443,7 +493,7 @@ async function decodeMedia(m) {
   const OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
   decodeCtx = decodeCtx || new OAC(2, 48000, 48000);
   const ab = await m.blob.arrayBuffer();
-  return new Promise((res, rej) => decodeCtx.decodeAudioData(ab, res, rej));
+  return new Promise((res, rej) => { const pr = decodeCtx.decodeAudioData(ab, res, rej); if (pr && pr.catch) pr.catch(() => {}); });
 }
 async function makePeaks(m) {
   try {
@@ -573,12 +623,15 @@ const FB = {};
 const PREC = '#ifdef GL_FRAGMENT_PRECISION_HIGH\nprecision highp float;\n#else\nprecision mediump float;\n#endif\n';
 const VS = 'attribute vec2 a;uniform mat3 m;uniform vec4 uvr;varying vec2 uv;varying vec2 luv;void main(){luv=a+.5;uv=mix(uvr.xy,uvr.zw,luv);vec3 p=m*vec3(a,1.);gl_Position=vec4(p.xy,0.,1.);}';
 const FS = PREC + `varying vec2 uv;varying vec2 luv;
-uniform sampler2D t;uniform float o,blur,sharp;uniform vec2 px,res;uniform vec4 a1,a2,a3,wipe;
+uniform sampler2D t,bd;uniform float o,blur,sharp,cks,mrot,bmode;uniform vec2 px,res;uniform vec4 a1,a2,a3,wipe,ck,mk1,mk2;
+vec2 cbcr(vec3 c){return vec2(dot(c,vec3(-.169,-.331,.5)),dot(c,vec3(.5,-.419,-.081)));}
 void main(){
   vec4 c=texture2D(t,uv);
   if(blur>0.){for(int i=1;i<=24;i++){float f=float(i);float an=f*2.39996;c+=texture2D(t,uv+vec2(cos(an),sin(an))*sqrt(f/24.)*px*blur);}c/=25.;}
   if(sharp>0.){vec4 n=texture2D(t,uv+vec2(px.x,0.))+texture2D(t,uv-vec2(px.x,0.))+texture2D(t,uv+vec2(0.,px.y))+texture2D(t,uv-vec2(0.,px.y));c.rgb+=(c.rgb*4.-n.rgb)*sharp;}
   vec3 q=c.a>0.?c.rgb/c.a:vec3(0.);
+  float al=c.a*o;
+  if(ck.a>0.){float kd=distance(cbcr(q),cbcr(ck.rgb));al*=smoothstep(ck.a,ck.a+cks+.001,kd);q=mix(vec3(dot(q,vec3(.299,.587,.114))),q,smoothstep(ck.a,ck.a+cks*2.+.08,kd));}
   q+=a1.x;q=(q-.5)*(1.+a1.y)+.5;
   float l=dot(q,vec3(.299,.587,.114));q=mix(vec3(l),q,1.+a1.z);
   q.r+=a1.w*.1;q.b-=a1.w*.1;q.g-=a2.x*.1;
@@ -588,10 +641,16 @@ void main(){
   if(a3.z!=0.){vec3 k=vec3(.57735);float cs=cos(a3.z),sn=sin(a3.z);q=q*cs+cross(k,q)*sn+k*dot(k,q)*(1.-cs);}
   q*=1.-a2.w*smoothstep(.25,.75,distance(luv,vec2(.5)));
   q=clamp(q,0.,1.);
-  float al=c.a*o;
+  if(mk1.x>.5){vec2 p=luv-.5-mk2.xy;p.x*=mk1.w;float cs=cos(mrot),sn=sin(mrot);p=vec2(p.x*cs+p.y*sn,-p.x*sn+p.y*cs);
+    vec2 hs=max(vec2(mk2.z*mk1.w,mk2.w)*.5,vec2(.0001));float d;
+    if(mk1.x<1.5)d=(length(p/hs)-1.)*min(hs.x,hs.y);else if(mk1.x<2.5){vec2 e=abs(p)-hs;d=max(e.x,e.y);}else d=p.y;
+    float mv=1.-smoothstep(-mk1.y*.5-.001,mk1.y*.5+.001,d);if(mk1.z>.5)mv=1.-mv;al*=mv;}
   if(wipe.x>.5){vec2 g=gl_FragCoord.xy/res;g.y=1.-g.y;float m;
     if(wipe.x<1.5)m=g.x;else if(wipe.x<2.5)m=1.-g.x;else if(wipe.x<3.5)m=g.y;else if(wipe.x<4.5)m=1.-g.y;else m=length((g-.5)*vec2(wipe.w,1.))/(.5*length(vec2(wipe.w,1.)));
     float e=wipe.y*(1.+wipe.z);al*=1.-smoothstep(e-wipe.z,e,m);}
+  if(bmode>.5){vec3 d=texture2D(bd,gl_FragCoord.xy/res).rgb;
+    if(bmode<1.5)q=d*q;else if(bmode<2.5)q=1.-(1.-d)*(1.-q);else if(bmode<3.5)q=mix(2.*d*q,1.-2.*(1.-d)*(1.-q),step(.5,d));
+    else if(bmode<4.5)q=min(d,q);else if(bmode<5.5)q=max(d,q);else if(bmode<6.5)q=min(d+q,1.);else if(bmode<7.5)q=abs(d-q);else q=(1.-2.*q)*d*d+2.*q*d;}
   gl_FragColor=vec4(q*al,al);
 }`;
 const PVS = 'attribute vec2 a;varying vec2 v;void main(){v=a+.5;gl_Position=vec4(a*2.,0.,1.);}';
@@ -619,13 +678,15 @@ function initGL() {
     if (!gl.getProgramParameter(pr, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(pr));
     const u = {}; names.forEach(n => u[n] = gl.getUniformLocation(pr, n)); return [pr, u];
   };
-  [LP, L] = prog(VS, FS, ['m', 'uvr', 'o', 'px', 'blur', 'sharp', 'a1', 'a2', 'a3', 'wipe', 'res']);
+  [LP, L] = prog(VS, FS, ['m', 'uvr', 'o', 'px', 'blur', 'sharp', 'a1', 'a2', 'a3', 'wipe', 'res', 'ck', 'cks', 'mk1', 'mk2', 'mrot', 'bmode', 'bd']);
   [PP, PU] = prog(PVS, PFS, ['time', 'res', 'glitch', 'shake', 'blur', 'rgb', 'pulse', 'grain']);
   const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-.5, -.5, .5, -.5, -.5, .5, .5, .5]), gl.STATIC_DRAW);
   gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
   gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
   gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
   for (const k in FB) delete FB[k];
+  // unit tekstur 1 = salinan latar belakang untuk blend mode
+  gl.useProgram(LP); gl.uniform1i(L.bd, 1); gl.activeTexture(gl.TEXTURE1); mkTex(); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, 1, 1, 0, gl.RGB, gl.UNSIGNED_BYTE, null); gl.activeTexture(gl.TEXTURE0);
 }
 glc.addEventListener('webglcontextlost', e => e.preventDefault());
 glc.addEventListener('webglcontextrestored', () => { players.forEach(p => { p.tex = null; p.ok = false; }); S.media.forEach(m => m.tex = null); textCache.clear(); initGL(); requestRender(); });
@@ -655,6 +716,8 @@ function drawTex(tex, tw, th, b, o) {
   gl.uniform2f(L.px, 1 / tw, 1 / th); gl.uniform1f(L.blur, o.blur || 0); gl.uniform1f(L.sharp, o.sharp || 0);
   gl.uniform4fv(L.a1, o.a1 || Z4); gl.uniform4fv(L.a2, o.a2 || Z4); gl.uniform4fv(L.a3, o.a3 || Z4);
   gl.uniform4fv(L.wipe, o.wipe || Z4); gl.uniform2f(L.res, TGT.w, TGT.h);
+  gl.uniform4fv(L.ck, o.ck || Z4); gl.uniform1f(L.cks, o.cks || 0); gl.uniform4fv(L.mk1, o.mk1 || Z4); gl.uniform4fv(L.mk2, o.mk2 || Z4); gl.uniform1f(L.mrot, o.mrot || 0); gl.uniform1f(L.bmode, o.blend || 0);
+  if (o.blend) { gl.activeTexture(gl.TEXTURE1); gl.copyTexImage2D(gl.TEXTURE_2D, 0, gl.RGB, 0, 0, TGT.w, TGT.h, 0); gl.activeTexture(gl.TEXTURE0); }
   gl.bindTexture(gl.TEXTURE_2D, tex); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 }
 function colorParams(c) {   // preset filter × intensitas + penyesuaian manual → uniform shader
@@ -669,34 +732,69 @@ function mediaDims(c) { const m = mediaOf(c); if (!m || !m.w) return null; const
 const textCache = new Map(); let fontEpoch = 0;
 function textEntry(c) {
   const q = (gl ? glc.height : LG.H) / LG.H, rs = clamp(Math.ceil(gv(c, 'scale')), 1, 3);
-  const key = JSON.stringify(c.text) + '|' + q.toFixed(3) + '|' + rs + '|' + fontEpoch;
+  const t = c.text, lines = (t.content || ' ').split('\n').map(l => Array.from(l)), total = lines.reduce((a, l) => a + l.length, 0);
+  const am = c.anim && c.anim.in || c.anim && c.anim.out ? animMod(c, RT) : null, shown = am ? Math.round(total * clamp(am.chars, 0, 1)) : total;
+  const key = JSON.stringify(t) + '|' + q.toFixed(3) + '|' + rs + '|' + fontEpoch + '|' + shown;
   let e = textCache.get(c.id);
   if (e && e.key === key) return e;
-  const t = c.text, lines = (t.content || ' ').split('\n');
   let k = q * rs, fpx = t.size * LG.H * k;
   const cv = (e && e.cv) || document.createElement('canvas'), x = cv.getContext('2d');
   const font = px => `${t.weight || 700} ${px}px "${t.font}",system-ui,sans-serif`;
-  x.font = font(fpx);
-  let mw = Math.max(1, ...lines.map(l => x.measureText(l).width));
-  if (mw + fpx > 4000) { const r = 4000 / (mw + fpx); k *= r; fpx *= r; mw *= r; }
-  const pad = fpx * 0.3, lh = fpx * 1.25;
+  const measure = () => { x.font = font(fpx); const sp = (t.spacing || 0) * fpx; return lines.map(l => sp ? l.reduce((a, ch) => a + x.measureText(ch).width + sp, -sp) : x.measureText(l.join('')).width); };
+  let lw = measure(), mw = Math.max(1, ...lw);
+  if (mw + fpx * 2 > 4000) { const r = 4000 / (mw + fpx * 2); k *= r; fpx *= r; lw = measure(); mw = Math.max(1, ...lw); }
+  const sp = (t.spacing || 0) * fpx, ow = (t.ow || 0) * fpx, shb = (t.sh || 0) * fpx * .35, pad = fpx * .3 + ow + shb, lh = fpx * 1.25;
   cv.width = Math.ceil(mw + pad * 2); cv.height = Math.ceil(lines.length * lh + pad * 2);
-  x.font = font(fpx); x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillStyle = t.color;
-  lines.forEach((l, i) => x.fillText(l, cv.width / 2, pad + lh * (i + .5)));
+  x.font = font(fpx); x.textAlign = 'left'; x.textBaseline = 'middle'; x.lineJoin = 'round';
+  if (t.bgo > 0) { const g = pad - fpx * .22; x.globalAlpha = t.bgo; x.fillStyle = t.bgc || '#000000'; rr(x, g, g, cv.width - g * 2, cv.height - g * 2, fpx * .18); x.fill(); x.globalAlpha = 1; }
+  // kumpulkan potongan teks yang tampil (semua, atau sebagian saat animasi mesin tik)
+  const runs = []; let left = shown;
+  lines.forEach((l, i) => {
+    const n = Math.min(left, l.length); left -= n; if (!n) return;
+    const x0 = t.align === 'left' ? pad : t.align === 'right' ? cv.width - pad - lw[i] : (cv.width - lw[i]) / 2, y = pad + lh * (i + .5);
+    if (sp) { let cx = x0; for (let j = 0; j < n; j++) { runs.push([l[j], cx, y]); cx += x.measureText(l[j]).width + sp; } } else runs.push([l.slice(0, n).join(''), x0, y]);
+  });
+  const shadow = on => { x.shadowColor = on ? (t.shc || '#000000') : 'transparent'; x.shadowBlur = on ? shb : 0; x.shadowOffsetX = x.shadowOffsetY = on ? shb * .25 : 0; };
+  if (ow > 0) { shadow(t.sh > 0); x.strokeStyle = t.oc || '#000000'; x.lineWidth = ow * 2; for (const [str, rx, ry] of runs) x.strokeText(str, rx, ry); shadow(false); }
+  else shadow(t.sh > 0);
+  x.fillStyle = t.color; for (const [str, rx, ry] of runs) x.fillText(str, rx, ry); shadow(false);
   e = { key, cv, w: cv.width / k, h: cv.height / k, tex: e && e.tex, dirty: true };
   textCache.set(c.id, e); return e;
 }
+function shapePath(x, kind, s) {
+  const c = s / 2, r = s * .44, poly = pts => { x.beginPath(); pts.forEach(([px, py], i) => i ? x.lineTo(px * s, py * s) : x.moveTo(px * s, py * s)); x.closePath(); };
+  const radial = (n, inner) => poly(Array.from({ length: n * 2 }, (_, i) => { const a = -Math.PI / 2 + i * Math.PI / n, rr2 = (i % 2 ? inner : 1) * r / s; return [.5 + Math.cos(a) * rr2, .5 + Math.sin(a) * rr2]; }));
+  if (kind === 'circle') { x.beginPath(); x.arc(c, c, r, 0, 7); }
+  else if (kind === 'rect') rr(x, s * .1, s * .1, s * .8, s * .8, s * .12);
+  else if (kind === 'tri') poly([[.5, .1], [.92, .88], [.08, .88]]);
+  else if (kind === 'star') radial(5, .45);
+  else if (kind === 'burst') radial(14, .74);
+  else if (kind === 'arrow') poly([[.08, .38], [.55, .38], [.55, .15], [.94, .5], [.55, .85], [.55, .62], [.08, .62]]);
+  else if (kind === 'bubble') { rr(x, s * .08, s * .12, s * .84, s * .58, s * .14); x.moveTo(s * .3, s * .68); x.lineTo(s * .24, s * .92); x.lineTo(s * .52, s * .68); x.closePath(); }
+  else { x.beginPath(); x.moveTo(c, s * .88); x.bezierCurveTo(-s * .1, s * .5, s * .2, s * .02, c, s * .3); x.bezierCurveTo(s * .8, s * .02, s * 1.1, s * .5, c, s * .88); x.closePath(); }
+}
+function stickerEntry(c) {
+  const q = (gl ? glc.height : LG.H) / LG.H, rs = clamp(Math.ceil(gv(c, 'scale')), 1, 3), base = .22 * Math.min(LG.W, LG.H), px = clamp(Math.round(base * q * rs), 32, 1024);
+  const key = JSON.stringify(c.st) + '|' + px; let e = textCache.get(c.id);
+  if (e && e.key === key) return e;
+  const cv = (e && e.cv) || document.createElement('canvas'), x = cv.getContext('2d'); cv.width = cv.height = px;
+  if (c.st.kind === 'emoji') { x.font = `${px * .78}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif`; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(c.st.ch, px / 2, px * .54); }
+  else { shapePath(x, c.st.shape, px); x.fillStyle = c.st.color || '#ffd23f'; x.fill(); }
+  e = { key, cv, w: base, h: base, tex: e && e.tex, dirty: true };
+  textCache.set(c.id, e); return e;
+}
+const entryOf = c => c.type === 'sticker' ? stickerEntry(c) : textEntry(c);
 function loadFont(name) { if (document.fonts && document.fonts.load) document.fonts.load(`700 32px "${name}"`).then(() => { fontEpoch++; requestRender(); }).catch(() => {}); }
 function layerBox(c) {
   const { W, H } = LG; let w, hh; const sc = gv(c, 'scale');
-  if (c.type === 'text') { const e = textEntry(c); w = e.w * sc; hh = e.h * sc; }
+  if (c.type === 'text' || c.type === 'sticker') { const e = entryOf(c); w = e.w * sc; hh = e.h * sc; }
   else { const d = mediaDims(c); if (!d) return null; const s = Math.min(W / d.w, H / d.h) * sc; w = d.w * s; hh = d.h * s; }
   return { cx: W / 2 + gv(c, 'x') * W, cy: H / 2 + gv(c, 'y') * H, w, h: hh, rot: gv(c, 'rot') * Math.PI / 180 };
 }
 const inRange = (c, t) => t >= c.start - 1e-6 && t < c.start + c.dur - 1e-6;
 function visualLayers(t) {   // lapisan yang bisa disentuh di pratinjau (tanpa pengubah transisi)
   const out = [];
-  for (const type of ['main', 'overlay', 'text']) for (const track of P().tracks) if (track.type === type)
+  for (const type of ['main', 'overlay', 'sticker', 'text']) for (const track of P().tracks) if (track.type === type)
     for (const clip of track.clips) if (inRange(clip, t)) out.push({ clip, track });
   return out;
 }
@@ -706,29 +804,37 @@ function sceneLayers(t) {    // lapisan untuk digambar, termasuk dua klip yang s
     const m = (TRANSITIONS[w.type] || TRANSITIONS.dissolve).f(w.p), la = { clip: w.A, track: main, mod: m.a || {} }, lb = { clip: w.B, track: main, mod: m.b || {} };
     if (m.aTop) out.push(lb, la); else out.push(la, lb);
   } else for (const clip of main.clips) if (inRange(clip, t)) out.push({ clip, track: main });
-  for (const type of ['overlay', 'text']) for (const track of P().tracks) if (track.type === type)
+  for (const type of ['overlay', 'sticker', 'text']) for (const track of P().tracks) if (track.type === type)
     for (const clip of track.clips) if (inRange(clip, t)) out.push({ clip, track });
   return out;
 }
 function layerTex(clip, track) {
-  if (clip.type === 'text') { const e = textEntry(clip); if (e.dirty) { e.tex = e.tex || mkTex(); upload(e.tex, e.cv); e.dirty = false; } return { tex: e.tex, tw: e.cv.width, th: e.cv.height }; }
+  if (clip.type === 'text' || clip.type === 'sticker') { const e = entryOf(clip); if (e.dirty) { e.tex = e.tex || mkTex(); upload(e.tex, e.cv); e.dirty = false; } return { tex: e.tex, tw: e.cv.width, th: e.cv.height }; }
   const m = mediaOf(clip); if (!m) return null;
   if (m.kind === 'image') { if (!m.img) return null; if (!m.tex) { m.tex = mkTex(); upload(m.tex, m.img); } return { tex: m.tex, tw: m.img.width, th: m.img.height }; }
   const p = getPlayer(clip, track);
   if (p.el.readyState >= 2 && !(p.el.seeking && p.ok)) { p.tex = p.tex || mkTex(); try { upload(p.tex, p.el); p.ok = true; } catch (e) {} }
   return p.ok ? { tex: p.tex, tw: p.el.videoWidth || m.w, th: p.el.videoHeight || m.h } : null;
 }
+let NO_KEY = false;   // true saat mengambil warna kunci dari pratinjau
+function applyMod(mod, box, o, g) {
+  if (!mod) return;
+  if (mod.blur) o.blur = (o.blur || 0) + mod.blur * g.tw / box.w;
+  box.cx += (mod.dx || 0) * LG.W; box.cy += (mod.dy || 0) * LG.H; if (mod.sc != null) { box.w *= mod.sc; box.h *= mod.sc; }
+  box.rot += (mod.rot || 0) * Math.PI / 180; if (mod.op != null) o.opacity *= mod.op;
+  if (mod.wipe) o.wipe = [mod.wipe[0], mod.wipe[1], .08, LG.W / LG.H];
+}
 function renderLayer({ clip, track, mod }) {
   const box = layerBox(clip); if (!box) return;
   const g = layerTex(clip, track); if (!g) return;
   const o = { opacity: gv(clip, 'opacity') };
-  if (clip.type !== 'text') { Object.assign(o, colorParams(clip)); o.uv = uvRect(clip); }
-  if (mod) {
-    if (mod.blur) o.blur = mod.blur * g.tw / box.w;
-    box.cx += (mod.dx || 0) * LG.W; box.cy += (mod.dy || 0) * LG.H; if (mod.sc) { box.w *= mod.sc; box.h *= mod.sc; }
-    box.rot += (mod.rot || 0) * Math.PI / 180; if (mod.op != null) o.opacity *= mod.op;
-    if (mod.wipe) o.wipe = [mod.wipe[0], mod.wipe[1], .08, LG.W / LG.H];
+  if (isMediaClip(clip)) {
+    Object.assign(o, colorParams(clip)); o.uv = uvRect(clip);
+    if (clip.chroma) { const k = hexRGB(clip.chroma.color); o.ck = [k[0], k[1], k[2], NO_KEY ? 0 : clip.chroma.tol]; o.cks = clip.chroma.soft; }
   }
+  if (clip.mask) { const mk = clip.mask; o.mk1 = [{ circle: 1, rect: 2, linear: 3 }[mk.type] || 0, mk.feather, mk.invert ? 1 : 0, box.w / box.h]; o.mk2 = [mk.x, mk.y, mk.w, mk.h]; o.mrot = mk.rot * Math.PI / 180; }
+  if (clip.blend) o.blend = Math.max(0, BLENDS.findIndex(b => b[0] === clip.blend));
+  applyMod(mod, box, o, g); applyMod(animMod(clip, RT), box, o, g);
   drawTex(g.tex, g.tw, g.th, box, o);
 }
 function drawBackground(t, target) {
@@ -797,7 +903,7 @@ const tlc = $('#tl'), tctx = tlc.getContext('2d');
 const TV = { w: 0, h: 0, dpr: 1 };
 let C = {};
 function readColors() {
-  for (const k of ['bg', 'lane', 'text', 'text-dim', 'text-faint', 'accent', 'clip-video', 'clip-image', 'clip-text', 'clip-audio', 'clip-fx', 'clip-ink', 'handle', 'handle-ink', 'line', 'warn']) C[k] = css('--' + k);
+  for (const k of ['bg', 'lane', 'text', 'text-dim', 'text-faint', 'accent', 'clip-video', 'clip-image', 'clip-text', 'clip-audio', 'clip-fx', 'clip-sticker', 'clip-ink', 'handle', 'handle-ink', 'line', 'warn']) C[k] = css('--' + k);
 }
 function sizeTimeline() {
   const r = $('#tlWrap').getBoundingClientRect(); TV.dpr = Math.min(devicePixelRatio || 1, 2.5); TV.w = r.width; TV.h = r.height;
@@ -811,9 +917,9 @@ function rows() {
   return out;
 }
 function rr(ctx, x, y, w, hh, r) { r = Math.min(r, w / 2, hh / 2); ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + hh, r); ctx.arcTo(x + w, y + hh, x, y + hh, r); ctx.arcTo(x, y + hh, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
-function clipLabel(c) { if (c.type === 'fx') return FX[c.fx.kind] || 'Efek'; if (c.type === 'text') return c.text.content.replace(/\n/g, ' '); const m = mediaOf(c); return (m ? m.name : 'Media hilang') + (c.speed !== 1 ? `  ${+c.speed.toFixed(2)}x` : ''); }
+function clipLabel(c) { if (c.type === 'sticker') return c.st.kind === 'emoji' ? c.st.ch : SHAPES[c.st.shape] || 'Bentuk'; if (c.type === 'fx') return FX[c.fx.kind] || 'Efek'; if (c.type === 'text') return c.text.content.replace(/\n/g, ' '); const m = mediaOf(c); return (m ? m.name : 'Media hilang') + (c.speed !== 1 ? `  ${+c.speed.toFixed(2)}x` : ''); }
 function drawClip(ctx, c, x0, y, w, hh, selected, alpha) {
-  const colors = { video: C['clip-video'], image: C['clip-image'], text: C['clip-text'], audio: C['clip-audio'], fx: C['clip-fx'] };
+  const colors = { video: C['clip-video'], image: C['clip-image'], text: C['clip-text'], audio: C['clip-audio'], fx: C['clip-fx'], sticker: C['clip-sticker'] };
   const m = c.mediaId ? mediaOf(c) : null, vx0 = Math.max(x0, -20), vx1 = Math.min(x0 + w, TV.w + 20);
   ctx.save(); ctx.globalAlpha = alpha; rr(ctx, x0 + .5, y, Math.max(2, w - 1), hh, 6); ctx.fillStyle = colors[c.type]; ctx.fill(); ctx.clip();
   if (m && m.thumbs && m.thumbs.length && (c.type === 'video' || c.type === 'image')) {
@@ -1037,6 +1143,12 @@ function hitPreview(e) {
 }
 wrap.addEventListener('pointerdown', e => {
   if (S.exporting) return;
+  if (S.pick) {   // mode pipet: baca warna piksel yang diketuk
+    const r = wrap.getBoundingClientRect(), b = new Uint8Array(4), fn = S.pick; S.pick = null;
+    NO_KEY = true; drawPreview(S.time); NO_KEY = false;
+    gl.readPixels(Math.floor((e.clientX - r.left) / r.width * glc.width), Math.floor((1 - (e.clientY - r.top) / r.height) * glc.height), 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, b);
+    fn('#' + [b[0], b[1], b[2]].map(v => v.toString(16).padStart(2, '0')).join('')); requestRender(); return;
+  }
   try { wrap.setPointerCapture(e.pointerId); } catch (_) {}
   PV.ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
   if (PV.ptrs.size === 2) { const c = selClip(); if (c && isVisual(c)) { const [a, b] = [...PV.ptrs.values()]; PV.mode = 'pinch'; PV.o = { scale: gv(c, 'scale'), rot: gv(c, 'rot'), d: Math.hypot(a.x - b.x, a.y - b.y) || 1, a: Math.atan2(b.y - a.y, b.x - a.x) }; PV.changed = true; } return; }
@@ -1126,6 +1238,7 @@ function addText() {
   const c = baseClip('text', { start: S.time, dur: 3, text: { content: 'Tulis di sini', font: 'Poppins', size: 0.06, color: '#ffffff', weight: 700 } });
   placeClip(c, 'text'); S.sel = c.id; commit(); sheetText();
 }
+function addSticker(st) { const c = baseClip('sticker', { start: S.time, dur: 3, st }); placeClip(c, 'sticker'); S.sel = c.id; commit(); }
 function addFx(kind) { const c = baseClip('fx', { start: S.time, dur: 3, fx: { kind, amt: .6 } }); placeClip(c, 'fx'); S.sel = c.id; commit(); sheetFx(); }
 function toggleKf() {
   const c = selClip(); if (!c || c.type === 'fx') return; const lt = S.time - c.start;
@@ -1171,6 +1284,7 @@ function refreshUI() {
     tb.append(
       tool('film', 'Media', () => pickFiles('video/*,image/*,audio/*')),
       tool('text', 'Teks', addText),
+      tool('sticker', 'Stiker', sheetSticker),
       tool('music', 'Audio', () => pickFiles('audio/*,.mp3,.wav,.m4a,.aac,.ogg', 'audio')),
       tool('fx', 'Efek', sheetFx),
       tool('split', 'Pisah', splitAtPlayhead),
@@ -1179,13 +1293,17 @@ function refreshUI() {
   } else {
     const onMain = findClip(c.id).track.type === 'main', media = c.type === 'video' || c.type === 'image';
     tb.append(tool('back', '', () => { closeSheet(); select(null); }, 'back'));
-    if (c.type === 'text') tb.append(tool('edit', 'Edit', sheetText));
+    if (c.type === 'text') tb.append(tool('edit', 'Edit', sheetText), tool('style', 'Gaya', sheetStyle));
+    if (c.type === 'sticker') tb.append(tool('sticker', 'Ganti', sheetSticker));
     if (c.type === 'fx') tb.append(tool('fx', 'Atur efek', sheetFx));
     tb.append(tool('split', 'Pisah', splitAtPlayhead));
     if (hasMediaTime(c)) tb.append(tool('speed', 'Kecepatan', sheetSpeed), tool('volume', 'Volume', sheetVolume));
     if (media) tb.append(tool('filter', 'Filter', sheetFilter), tool('adjust', 'Atur warna', sheetAdjust));
     if (isVisual(c)) tb.append(tool('move', 'Ubah', sheetTransform));
     if (media) tb.append(tool('crop', 'Potong', sheetCrop));
+    if (isVisual(c)) tb.append(tool('anim', 'Animasi', sheetAnim));
+    if (media) tb.append(tool('chroma', 'Kunci warna', sheetChroma));
+    if (isVisual(c)) tb.append(tool('mask', 'Mask', sheetMask), tool('blend', 'Campur', sheetBlend));
     if (c.type !== 'fx') tb.append(tool('kf', 'Keyframe', sheetKeyframe));
     if (c.type === 'video') tb.append(tool('freeze', 'Bekukan', freezeFrame), tool('reverse', c.reverse ? 'Maju' : 'Mundur', toggleReverse));
     if (media) tb.append(tool('layers', onMain ? 'Jadi overlay' : 'Ke trek utama', toggleOverlay));
@@ -1321,16 +1439,86 @@ function sheetFx() {
     h('p', { class: 'hint' }, 'Efek berlaku untuk seluruh gambar selama bloknya di timeline. Tarik ujung blok untuk mengatur lamanya.')], true);
   else openSheet('Tambah efek', [chips(Object.keys(FX).map(k => [k, FX[k]]), null, addFx), h('p', { class: 'hint' }, 'Efek ditaruh di posisi garis putar selama 3 detik.')]);
 }
+function toggleChip(label, on, fn) { const b = h('button', { class: 'chip', 'aria-pressed': String(!!on) }, label); b.onclick = () => { const v = b.getAttribute('aria-pressed') !== 'true'; b.setAttribute('aria-pressed', String(v)); fn(v); }; return b; }
 function sheetText() {
   const c = selClip(); if (!c || c.type !== 'text') return; const t = c.text;
   const ta = h('textarea', { rows: 2, 'aria-label': 'Isi teks' }); ta.value = t.content;
   ta.oninput = () => { t.content = ta.value; requestRender(); }; ta.onchange = () => commit();
   openSheet('Teks', [ta,
+    h('p', { class: 'group-l' }, 'Template judul'),
+    chips(TEMPLATES.map((tp, i) => [i, tp[0], `font-family:"${tp[1].font}",sans-serif`]), -1, i => { const tp = TEMPLATES[i]; Object.assign(t, tp[1]); c.anim = clone(tp[2]); loadFont(t.font); commit(); sheetText(); pause(); seek(c.start); play(); }, true),
     h('p', { class: 'group-l' }, 'Huruf'),
     chips(FONTS.map(f => [f, f, `font-family:"${f}",sans-serif`]), t.font, f => { t.font = f; loadFont(f); commit(); }, true),
-    slider('Ukuran', { min: 2, max: 25, step: .5, value: t.size * 100, fmt: v => v, on: v => t.size = v / 100 }),
+    slider('Ukuran', { min: 2, max: 25, step: .5, value: Math.round(t.size * 200) / 2, fmt: v => (+v).toFixed(1), on: v => t.size = v / 100 }),
     h('p', { class: 'group-l' }, 'Warna'),
     swatches(t.color, (col, live) => { t.color = col; if (live) requestRender(); else { commit(); sheetText(); } })], true);
+}
+function sheetStyle() {
+  const c = selClip(); if (!c || c.type !== 'text') return; const t = c.text;
+  const col = (key, def) => swatches(t[key] || def, (v, live) => { t[key] = v; if (live) requestRender(); else { commit(); sheetStyle(); } });
+  openSheet('Gaya teks', [
+    h('div', { class: 'row' }, toggleChip('Tebal', (t.weight || 700) >= 600, v => { t.weight = v ? 700 : 400; commit(); }), chips([['left', 'Kiri'], ['center', 'Tengah'], ['right', 'Kanan']], t.align || 'center', v => { t.align = v; commit(); })),
+    slider('Spasi huruf', { min: -5, max: 60, step: 1, value: Math.round((t.spacing || 0) * 100), on: v => t.spacing = v / 100 }),
+    h('p', { class: 'group-l' }, 'Garis tepi'), slider('Tebal', { min: 0, max: 20, step: 1, value: Math.round((t.ow || 0) * 100), on: v => t.ow = v / 100 }), col('oc', '#000000'),
+    h('p', { class: 'group-l' }, 'Bayangan'), slider('Kekuatan', { min: 0, max: 100, step: 1, value: Math.round((t.sh || 0) * 100), on: v => t.sh = v / 100 }), col('shc', '#000000'),
+    h('p', { class: 'group-l' }, 'Latar teks'), slider('Opasitas', { min: 0, max: 100, step: 1, value: Math.round((t.bgo || 0) * 100), fmt: v => v + '%', on: v => t.bgo = v / 100 }), col('bgc', '#000000')], true);
+}
+function sheetAnim() {
+  const c = selClip(); if (!c) return; const a = c.anim || {};
+  const set = (slot, id) => {
+    c.anim = c.anim || {}; if (id) c.anim[slot] = slot === 'loop' ? { id } : { id, dur: c.anim[slot] ? c.anim[slot].dur : .5 }; else delete c.anim[slot];
+    commit(); sheetAnim(); if (id) { pause(); seek(slot === 'out' ? Math.max(c.start, c.start + c.dur - 1.2) : c.start); play(); }
+  };
+  const io = [[null, 'Tanpa']].concat(Object.keys(ANIM_IO).filter(k => c.type === 'text' || !ANIM_IO[k].textOnly).map(k => [k, ANIM_IO[k].n]));
+  const dur = slot => a[slot] ? slider('Lama', { min: .1, max: 2, step: .1, value: a[slot].dur, fmt: v => v.toFixed(1) + ' dtk', on: v => c.anim[slot].dur = v }) : null;
+  openSheet('Animasi', [
+    h('p', { class: 'group-l' }, 'Masuk'), chips(io, a.in ? a.in.id : null, v => set('in', v), true), dur('in'),
+    h('p', { class: 'group-l' }, 'Keluar'), chips(io, a.out ? a.out.id : null, v => set('out', v), true), dur('out'),
+    h('p', { class: 'group-l' }, 'Berulang'), chips([[null, 'Tanpa']].concat(Object.keys(ANIM_LOOP).map(k => [k, ANIM_LOOP[k].n])), a.loop ? a.loop.id : null, v => set('loop', v), true)], true);
+}
+function sheetSticker() {
+  const c = selClip(), cur = c && c.type === 'sticker' ? c : null;
+  const pick = st => { if (cur) { cur.st = st; commit(); sheetSticker(); } else { addSticker(st); sheetSticker(); } };
+  const grid = h('div', { class: 'grid' }); for (const ch of EMOJI) grid.append(h('button', { class: 'emo', 'aria-label': 'Stiker ' + ch, onclick: () => pick({ kind: 'emoji', ch }) }, ch));
+  const shapeColor = cur && cur.st.kind === 'shape' ? cur.st.color : '#ffd23f';
+  openSheet(cur ? 'Ganti stiker' : 'Stiker', [
+    h('p', { class: 'group-l' }, 'Bentuk'), chips(Object.keys(SHAPES).map(k => [k, SHAPES[k]]), cur && cur.st.kind === 'shape' ? cur.st.shape : null, k => pick({ kind: 'shape', shape: k, color: shapeColor }), true),
+    cur && cur.st.kind === 'shape' ? swatches(shapeColor, (col, live) => { cur.st.color = col; if (live) requestRender(); else { commit(); sheetSticker(); } }) : null,
+    h('p', { class: 'group-l' }, 'Emoji'), grid,
+    h('p', { class: 'hint' }, 'Di pratinjau: seret untuk memindahkan, cubit dua jari untuk ukuran dan putaran.')], !!cur);
+}
+function sheetChroma() {
+  const c = selClip(); if (!c) return; const ck = c.chroma;
+  const body = [h('div', { class: 'row' },
+    toggleChip('Aktif', !!ck, v => { if (v) c.chroma = { color: '#00d000', tol: .3, soft: .1 }; else delete c.chroma; commit(); sheetChroma(); }),
+    ck && h('button', { class: 'chip', onclick: () => { toast('Ketuk warna yang ingin dihapus di pratinjau'); S.pick = hex => { c.chroma.color = hex; commit(); sheetChroma(); }; } }, 'Ambil dari pratinjau'))];
+  if (ck) {
+    const row = h('div', { class: 'row' });
+    for (const col of ['#00d000', '#0047ff', '#ff00ff', '#ffffff', '#000000']) row.append(h('button', { class: 'swatch', style: `background:${col}`, 'aria-label': 'Warna kunci ' + col, 'aria-pressed': String(col === ck.color), onclick: () => { ck.color = col; commit(); sheetChroma(); } }));
+    const inp = h('input', { type: 'color', value: ck.color, 'aria-label': 'Warna kunci lain' }); inp.oninput = () => { ck.color = inp.value; requestRender(); }; inp.onchange = () => commit(); row.append(inp);
+    body.push(h('p', { class: 'group-l' }, 'Warna yang dihapus'), row,
+      slider('Toleransi', { min: 2, max: 80, step: 1, value: Math.round(ck.tol * 100), on: v => ck.tol = v / 100 }),
+      slider('Kehalusan tepi', { min: 0, max: 50, step: 1, value: Math.round(ck.soft * 100), on: v => ck.soft = v / 100 }));
+  }
+  body.push(h('p', { class: 'hint' }, 'Paling cocok untuk layar hijau atau biru. Taruh klip sebagai overlay supaya klip di bawahnya terlihat.'));
+  openSheet('Kunci warna', body, true);
+}
+function sheetMask() {
+  const c = selClip(); if (!c) return; const mk = c.mask;
+  const body = [chips([[null, 'Tanpa'], ['circle', 'Lingkaran'], ['rect', 'Persegi'], ['linear', 'Linear']], mk ? mk.type : null, v => { if (v) c.mask = Object.assign({ x: 0, y: 0, w: .7, h: .7, rot: 0, feather: .05, invert: false }, c.mask, { type: v }); else delete c.mask; commit(); sheetMask(); })];
+  if (mk) {
+    const sl = (n, k, min, max, mul, fmt) => slider(n, { min, max, step: 1, value: Math.round(mk[k] * mul), fmt, on: v => mk[k] = v / mul });
+    if (mk.type !== 'linear') body.push(sl('Lebar', 'w', 5, 150, 100, v => v + '%'), sl('Tinggi', 'h', 5, 150, 100, v => v + '%'));
+    body.push(sl('Posisi X', 'x', -50, 50, 100), sl('Posisi Y', 'y', -50, 50, 100), sl('Rotasi', 'rot', -180, 180, 1, v => v + '°'), sl('Feather', 'feather', 0, 50, 100),
+      h('div', { class: 'row' }, toggleChip('Balik mask', mk.invert, v => { mk.invert = v; commit(); })));
+  }
+  openSheet('Mask', body, true);
+}
+function sheetBlend() {
+  const c = selClip(); if (!c) return;
+  openSheet('Mode campur', [chips(BLENDS, c.blend || 'normal', v => { if (v === 'normal') delete c.blend; else c.blend = v; commit(); }),
+    slider('Opasitas', { min: 0, max: 100, step: 1, value: Math.round(gv(c, 'opacity', S.time) * 100), fmt: v => v + '%', on: v => setProp(c, 'opacity', v / 100) }),
+    h('p', { class: 'hint' }, 'Menentukan cara klip ini bercampur dengan semua yang ada di bawahnya.')], true);
 }
 $('#sheetClose').innerHTML = ic('close'); $('#sheetClose').onclick = closeSheet;
 
@@ -1535,7 +1723,7 @@ async function restore() {
   readColors(); initGL(); refreshTransport();
   await restore();
   layoutMain(); fixOverlaps(); Hist.last = JSON.stringify(P());
-  FONTS.forEach(loadFont);
+  new Set(P().tracks.flatMap(t => t.clips.filter(c => c.type === 'text').map(c => c.text.font)).concat('Poppins')).forEach(loadFont);
   if (document.fonts) document.fonts.addEventListener && document.fonts.addEventListener('loadingdone', () => { fontEpoch++; requestRender(); });
   new ResizeObserver(() => { sizePreview(); sizeTimeline(); }).observe($('#app'));
   afterChange(); sizeTimeline();

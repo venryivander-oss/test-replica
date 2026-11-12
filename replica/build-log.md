@@ -9,3 +9,6 @@
   - Shader lapisan baru (warna, blur, sharpen, wipe) + shader pasca lewat framebuffer; hanya dipakai saat ada efek aktif.
   - Lebih sulit dari perkiraan: reverse. Tanpa dekode frame sendiri, pratinjaunya hanya bisa seek per frame (patah-patah); ekspor tetap akurat.
   - Ekspor dengan reverse/efek blur jauh lebih lambat di GL perangkat lunak (uji headless ±220 ms/frame); belum diukur di GPU nyata.
+- Tahap 3 — 2026-11-12 — done. Chroma key + pipet, mask, 8 blend mode (salin latar ke tekstur lalu campur di shader), stiker emoji/bentuk, gaya teks lengkap, animasi masuk/keluar/berulang, 9 template judul.
+  - Font Google dimuat dari 4 berkas CSS terpisah (28 keluarga); tidak bisa diverifikasi di lingkungan uji karena fonts.googleapis.com diblokir.
+  - Belum ada: pegangan mask di pratinjau, wipe per-lapisan untuk animasi teks.

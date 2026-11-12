@@ -5,7 +5,7 @@ Playhead di tengah + geser + pinch/tombol zoom + thumbnail,1,yes,
 Trim handle/split/hapus/duplikat/urutkan/snap,1,yes,belum ada auto-scroll saat menyeret ke tepi layar
 Kecepatan 0.1x-10x,1,yes,speed curve di tahap 2
 Posisi/skala/rotasi/opasitas + gestur di pratinjau,1,yes,
-Teks dasar (isi/font/ukuran/warna),1,yes,outline/shadow/animasi di tahap 3
+Teks: 28 font/warna/outline/bayangan/latar/spasi/rata,3,yes,
 Rasio kanvas 6 pilihan,1,yes,
 Latar kanvas warna/blur/gambar,2,yes,
 Volume & bisu per klip + waveform audio,1,yes,
@@ -23,5 +23,10 @@ Speed curve 7 preset,2,yes,kurva tidak bisa digambar sendiri
 Freeze frame,2,yes,menjadi klip foto 2 detik
 Reverse klip pendek (≤10 dtk),2,partial,pratinjau patah-patah (seek per frame); ekspor akurat; audio dibisukan
 Rotasi 90°/flip/crop,2,yes,crop lewat slider & preset rasio
-Chroma key/mask/blend/stiker/animasi teks,3,no,
+Chroma key (warna/toleransi/kehalusan + pipet),3,yes,berbasis kroma; tidak bisa mengunci hitam/putih/abu
+Mask lingkaran/persegi/linear + feather + balik,3,yes,diatur lewat slider; belum ada pegangan di pratinjau
+Blend mode 8 jenis,3,yes,untuk semua klip visual
+Stiker emoji (48) & bentuk (8),3,yes,seret/cubit di pratinjau
+Animasi masuk/keluar (11) & berulang (7),3,yes,untuk teks/stiker/klip; mesin tik khusus teks
+Template judul (9),3,yes,
 EQ/pitch/fade/pisah audio/beat/caption SRT,4,no,
