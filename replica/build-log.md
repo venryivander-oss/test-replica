@@ -5,3 +5,7 @@
   - Diuji di Chromium headless 390px & 1440px (mouse, keyboard, sentuh via CDP). Belum diuji di perangkat iOS/Android asli.
   - Lebih sulit dari perkiraan: sinkronisasi seek video saat scrub (frame harus digambar sebelum seek berikutnya).
   - Belum ada: auto-scroll saat menyeret klip ke tepi, pindah klip antar-trek secara manual (otomatis jika bertabrakan).
+- Tahap 2 — 2026-11-12 — done. Keyframe + easing, 15 transisi, 17 filter, 9 penyesuaian, 6 efek pasca (trek efek), speed curve, freeze, reverse, flip, crop, latar blur/gambar.
+  - Shader lapisan baru (warna, blur, sharpen, wipe) + shader pasca lewat framebuffer; hanya dipakai saat ada efek aktif.
+  - Lebih sulit dari perkiraan: reverse. Tanpa dekode frame sendiri, pratinjaunya hanya bisa seek per frame (patah-patah); ekspor tetap akurat.
+  - Ekspor dengan reverse/efek blur jauh lebih lambat di GL perangkat lunak (uji headless ±220 ms/frame); belum diukur di GPU nyata.

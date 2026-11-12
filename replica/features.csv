@@ -7,14 +7,21 @@ Kecepatan 0.1x-10x,1,yes,speed curve di tahap 2
 Posisi/skala/rotasi/opasitas + gestur di pratinjau,1,yes,
 Teks dasar (isi/font/ukuran/warna),1,yes,outline/shadow/animasi di tahap 3
 Rasio kanvas 6 pilihan,1,yes,
-Latar kanvas warna,1,partial,blur & gambar di tahap 2
+Latar kanvas warna/blur/gambar,2,yes,
 Volume & bisu per klip + waveform audio,1,yes,
 Ekspor MP4 WebCodecs + mp4-muxer,1,yes,720p/1080p/4K; 24/30/60; 3 bitrate
 Ekspor fallback MediaRecorder,1,yes,real-time
 Progress/ETA/batal/pratinjau hasil,1,yes,
 Simpan otomatis IndexedDB,1,yes,
 Undo/redo tanpa batas + pintasan keyboard,1,yes,
-Keyframe/transisi/filter/efek WebGL,2,no,
-Freeze/reverse/flip/crop/speed curve,2,no,
+Keyframe posisi/skala/rotasi/opasitas/volume + 6 easing,2,yes,satu keyframe menyimpan semua properti
+Transisi antar klip utama (15 jenis),2,yes,klip keluar/masuk dibekukan di frame tepi selama transisi; audio tidak di-crossfade
+Filter 17 preset + intensitas,2,yes,per klip
+Penyesuaian warna 9 parameter,2,yes,
+Efek video 6 jenis di trek efek,2,yes,berlaku untuk seluruh gambar
+Speed curve 7 preset,2,yes,kurva tidak bisa digambar sendiri
+Freeze frame,2,yes,menjadi klip foto 2 detik
+Reverse klip pendek (≤10 dtk),2,partial,pratinjau patah-patah (seek per frame); ekspor akurat; audio dibisukan
+Rotasi 90°/flip/crop,2,yes,crop lewat slider & preset rasio
 Chroma key/mask/blend/stiker/animasi teks,3,no,
 EQ/pitch/fade/pisah audio/beat/caption SRT,4,no,
