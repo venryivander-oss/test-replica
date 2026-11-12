@@ -1,0 +1,20 @@
+feature,stage,clone,note
+Impor video/foto/audio multi-file,1,yes,juga drag & drop di desktop
+Timeline multi-track (utama/overlay/teks/audio),1,yes,trek stiker & efek menyusul di tahap 3 dan 2
+Playhead di tengah + geser + pinch/tombol zoom + thumbnail,1,yes,
+Trim handle/split/hapus/duplikat/urutkan/snap,1,yes,belum ada auto-scroll saat menyeret ke tepi layar
+Kecepatan 0.1x-10x,1,yes,speed curve di tahap 2
+Posisi/skala/rotasi/opasitas + gestur di pratinjau,1,yes,
+Teks dasar (isi/font/ukuran/warna),1,yes,outline/shadow/animasi di tahap 3
+Rasio kanvas 6 pilihan,1,yes,
+Latar kanvas warna,1,partial,blur & gambar di tahap 2
+Volume & bisu per klip + waveform audio,1,yes,
+Ekspor MP4 WebCodecs + mp4-muxer,1,yes,720p/1080p/4K; 24/30/60; 3 bitrate
+Ekspor fallback MediaRecorder,1,yes,real-time
+Progress/ETA/batal/pratinjau hasil,1,yes,
+Simpan otomatis IndexedDB,1,yes,
+Undo/redo tanpa batas + pintasan keyboard,1,yes,
+Keyframe/transisi/filter/efek WebGL,2,no,
+Freeze/reverse/flip/crop/speed curve,2,no,
+Chroma key/mask/blend/stiker/animasi teks,3,no,
+EQ/pitch/fade/pisah audio/beat/caption SRT,4,no,
