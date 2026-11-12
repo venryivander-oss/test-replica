@@ -2,7 +2,7 @@ feature,stage,clone,note
 Impor video/foto/audio multi-file,1,yes,juga drag & drop di desktop
 Timeline multi-track (utama/overlay/teks/audio),1,yes,trek stiker & efek menyusul di tahap 3 dan 2
 Playhead di tengah + geser + pinch/tombol zoom + thumbnail,1,yes,
-Trim handle/split/hapus/duplikat/urutkan/snap,1,yes,belum ada auto-scroll saat menyeret ke tepi layar
+Trim handle/split/hapus/duplikat/urutkan/snap,1,yes,
 Kecepatan 0.1x-10x,1,yes,speed curve di tahap 2
 Posisi/skala/rotasi/opasitas + gestur di pratinjau,1,yes,
 Teks: 28 font/warna/outline/bayangan/latar/spasi/rata,3,yes,
@@ -29,4 +29,12 @@ Blend mode 8 jenis,3,yes,untuk semua klip visual
 Stiker emoji (48) & bentuk (8),3,yes,seret/cubit di pratinjau
 Animasi masuk/keluar (11) & berulang (7),3,yes,untuk teks/stiker/klip; mesin tik khusus teks
 Template judul (9),3,yes,
-EQ/pitch/fade/pisah audio/beat/caption SRT,4,no,
+Fade masuk/keluar audio,4,yes,
+Pisahkan audio dari video,4,yes,
+Equalizer 3 pita,4,yes,
+Pengubah suara / pitch ±12 semiton + robot,4,yes,penggeser nada berbasis delay; ada sedikit artefak pada pergeseran besar
+Penanda ketukan manual + snap,4,yes,
+Editor caption (baris/waktu/gaya),4,yes,satu gaya untuk semua caption
+Impor/ekspor SRT,4,yes,
+Auto-scroll saat menyeret klip ke tepi,4,yes,untuk geser klip dan trim kanan
+Daftar pintasan keyboard,4,yes,tombol ? di desktop

@@ -17,7 +17,7 @@
   --bg:#0d0e11; --surface:#17191e; --surface-2:#21242b; --surface-3:#2c3039;
   --line:#2f333c; --text:#f1f2f4; --text-dim:#9aa0ab; --text-faint:#646a76;
   --accent:#19d3c5; --accent-ink:#04201e; --danger:#ff5d6c; --warn:#ffc857;
-  --clip-video:#33507a; --clip-image:#5a4a86; --clip-text:#a2572f; --clip-audio:#1f6f5c; --clip-fx:#7a3f6b; --clip-sticker:#8a7a1f; --clip-ink:#ffffff;
+  --clip-video:#33507a; --clip-image:#5a4a86; --clip-text:#a2572f; --clip-audio:#1f6f5c; --clip-fx:#7a3f6b; --clip-sticker:#8a7a1f; --clip-caption:#2f6f8f; --clip-ink:#ffffff;
   --lane:#14161a; --handle:#ffffff; --handle-ink:#17191e; --scrim:rgba(5,6,8,.72);
   --r-s:6px; --r-m:10px; --r-l:16px; --r-pill:999px;
   --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:24px;
@@ -108,6 +108,15 @@ textarea{width:100%;background:var(--surface-2);border:1px solid var(--line);bor
 .row{display:flex;gap:var(--sp-2);align-items:center;flex-wrap:wrap}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(44px,1fr));gap:var(--sp-1)}
 .emo{height:var(--tap);font-size:26px;border-radius:var(--r-m);background:var(--surface-2)}
+.caprow{display:grid;grid-template-columns:66px 66px 1fr var(--tap);gap:var(--sp-2);align-items:center}
+.caprow input,.caprow textarea{background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r-s);padding:var(--sp-2);min-height:40px;width:100%;font-size:var(--fs-s)}
+.caprow textarea{min-height:40px;height:40px}
+.btn.wide{width:100%;justify-content:center;min-height:64px;font-size:var(--fs-l)}
+.keys{display:grid;grid-template-columns:auto 1fr;gap:var(--sp-2) var(--sp-4);font-size:var(--fs-s);margin:0}
+.keys dt{font-family:ui-monospace,monospace;color:var(--accent)}.keys dd{margin:0;color:var(--text-dim)}
+#btnHelp{display:none}
+@media(min-width:700px){#btnHelp{display:inline-flex}}
+@media(prefers-reduced-motion:reduce){.sheet,#toast{transition:none}}
 .hint{font-size:var(--fs-xs);color:var(--text-faint);margin:0}
 .group-l{font-size:var(--fs-xs);color:var(--text-dim);text-transform:uppercase;letter-spacing:.06em;margin:0}
 
@@ -132,6 +141,7 @@ textarea{width:100%;background:var(--surface-2);border:1px solid var(--line);bor
     <div class="brand"><i></i><span id="brandName"></span></div>
     <span class="save-state" id="saveState" aria-live="polite"></span>
     <div class="grow"></div>
+    <button class="btn" id="btnHelp" title="Pintasan keyboard" aria-label="Pintasan keyboard">?</button>
     <button class="btn" id="btnNew" title="Proyek baru">Baru</button>
     <button class="btn" id="btnRatio" aria-label="Rasio kanvas">9:16</button>
     <button class="btn primary" id="btnExport">Ekspor</button>
@@ -180,7 +190,7 @@ textarea{width:100%;background:var(--surface-2);border:1px solid var(--line);bor
 <script>
 'use strict';
 /* =====================================================================
-   Rangkai — editor video satu file. Tahap 3.
+   Rangkai — editor video satu file. Tahap 4 (lengkap).
    Bagian: util · state · riwayat · penyimpanan · media · pemutar ·
            WebGL · timeline · pratinjau · alat & panel · ekspor · boot
    ===================================================================== */
@@ -224,6 +234,8 @@ const ICONS = {
   sticker: 'M3 12a9 9 0 1018 0a9 9 0 10-18 0M8.5 14.5a4 4 0 007 0M9 9.5v.5M15 9.5v.5', anim: 'M3 12h4l2-6 4 12 2-6h6',
   mask: 'M4 4h16v16H4zM8 12a4 4 0 108 0a4 4 0 10-8 0', blend: 'M4 4h11v11H4zM9 9h11v11H9z', chroma: 'M12 3l6 8a6 6 0 11-12 0z',
   style: 'M4 20l5-14h2l5 14M6.5 14h7M17 8h4M19 6v4',
+  caption: 'M4 6h16v12H4zM7 11h4M7 14h7M14 11h3', beat: 'M12 4v16M7 8v8M17 8v8M3 11v2M21 11v2',
+  voice: 'M12 3a3 3 0 00-3 3v5a3 3 0 006 0V6a3 3 0 00-3-3zM6 11a6 6 0 0012 0M12 17v4', detach: 'M4 8h8v8H4zM16 6v12M20 9v6',
   reverse: 'M11 6l-6 6 6 6M19 6l-6 6 6 6', fx: 'M12 3l2 6 6 2-6 2-2 6-2-6-6-2 6-2z',
 };
 function ic(name) {
@@ -241,8 +253,8 @@ function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.ad
 const RATIOS = { '9:16': [9, 16], '16:9': [16, 9], '1:1': [1, 1], '4:5': [4, 5], '3:4': [3, 4], '21:9': [21, 9] };
 const FONTS = ['Inter', 'Poppins', 'Montserrat', 'Roboto', 'Lato', 'Nunito', 'Rubik', 'Raleway', 'Oswald', 'Anton', 'Bebas Neue', 'Archivo Black', 'Playfair Display', 'Merriweather', 'Abril Fatface', 'Lobster', 'Pacifico', 'Dancing Script', 'Satisfy', 'Caveat', 'Shadows Into Light', 'Permanent Marker', 'Bangers', 'Righteous', 'Fredoka', 'Comfortaa', 'Press Start 2P', 'Courier Prime'];
 const PALETTE = ['#ffffff', '#000000', '#ffd23f', '#ff5d6c', '#19d3c5', '#4d8dff', '#b98cff', '#7bd66a', '#ff9f43'];
-const TYPE_ORDER = ['fx', 'text', 'sticker', 'overlay', 'main', 'audio'];   // urutan baris di timeline (atas ke bawah)
-const ROW_H = { fx: 26, text: 30, sticker: 30, overlay: 44, main: 58, audio: 38 };
+const TYPE_ORDER = ['fx', 'caption', 'text', 'sticker', 'overlay', 'main', 'audio'];   // urutan baris di timeline (atas ke bawah)
+const ROW_H = { fx: 26, caption: 26, text: 30, sticker: 30, overlay: 44, main: 58, audio: 38 };
 const RULER_H = 24, ROW_GAP = 5, MIN_DUR = 0.1, PEAK_RATE = 50;
 
 function newProject() {
@@ -364,6 +376,13 @@ const TEMPLATES = [
 const EMOJI = '😀 😂 🥹 😍 😎 🤩 🥳 😭 😡 🤔 😴 🤯 👍 👎 👏 🙏 💪 👀 ❤️ 🔥 ✨ ⭐ 🎉 🎁 🎵 💯 ✅ ❌ ⚡ 💥 💬 💡 📍 📸 🎬 🏆 ☀️ 🌙 🌈 🌸 🍕 ☕ 🚀 ✈️ 🐱 🐶 👑 💎'.split(' ');
 const SHAPES = { circle: 'Lingkaran', rect: 'Kotak', tri: 'Segitiga', star: 'Bintang', heart: 'Hati', arrow: 'Panah', bubble: 'Balon', burst: 'Ledakan' };
 const FX = { glitch: 'Glitch', shake: 'Guncang', blur: 'Blur', rgb: 'RGB split', pulse: 'Zoom denyut', grain: 'Butiran film' };
+const CAP_DEFAULT = { font: 'Poppins', size: .035, color: '#ffffff', weight: 700, ow: .06, oc: '#000000', sh: 0, bgo: 0, bgc: '#000000', align: 'center', maxW: .86, y: .36 };
+const capStyle = () => P().capStyle || (P().capStyle = clone(CAP_DEFAULT));
+const textOf = c => c.type === 'caption' ? Object.assign({}, capStyle(), { content: c.cap }) : c.text;
+const capClips = () => P().tracks.filter(t => t.type === 'caption').flatMap(t => t.clips).sort((a, b) => a.start - b.start);
+const VOICES = [['normal', 'Normal', 0], ['anak', 'Anak', 4], ['tupai', 'Tupai', 8], ['berat', 'Berat', -4], ['raksasa', 'Raksasa', -8], ['robot', 'Robot', 0]];
+function fadeK(c, lt) { let k = 1; if (c.fadeIn > 0 && lt < c.fadeIn) k *= clamp(lt / c.fadeIn, 0, 1); if (c.fadeOut > 0 && c.dur - lt < c.fadeOut) k *= clamp((c.dur - lt) / c.fadeOut, 0, 1); return k; }
+const effVol = (c, t) => Math.max(0, gv(c, 'volume', t)) * fadeK(c, t - c.start);
 function trWindow(t) {   // transisi yang sedang berlangsung di trek utama pada waktu t
   const cs = mainTrack().clips;
   for (let i = 0; i < cs.length - 1; i++) { const A = cs[i]; if (!A.tr) continue; const B = cs[i + 1], d = Math.min(A.tr.dur, A.dur, B.dur), cut = B.start; if (t >= cut - d / 2 && t < cut + d / 2) return { A, B, type: A.tr.type, p: (t - (cut - d / 2)) / d }; }
@@ -394,7 +413,7 @@ function afterChange() {
   layoutMain(); fixOverlaps(); updateLogical();
   S.time = clamp(S.time, 0, duration());
   if (S.sel && !findClip(S.sel)) S.sel = null;
-  refreshUI(); sizePreview(); requestRender(); scheduleSave();
+  ensurePeaks(); refreshUI(); sizePreview(); requestRender(); scheduleSave();
 }
 function commit() {
   layoutMain(); fixOverlaps();
@@ -495,7 +514,9 @@ async function decodeMedia(m) {
   const ab = await m.blob.arrayBuffer();
   return new Promise((res, rej) => { const pr = decodeCtx.decodeAudioData(ab, res, rej); if (pr && pr.catch) pr.catch(() => {}); });
 }
+function ensurePeaks() { for (const t of P().tracks) if (t.type === 'audio') for (const c of t.clips) { const m = mediaOf(c); if (m && !m.peaks && !m.peaksReq) makePeaks(m); } }
 async function makePeaks(m) {
+  m.peaksReq = true;
   try {
     const buf = await decodeMedia(m), ch = buf.getChannelData(0), step = buf.sampleRate / PEAK_RATE;
     const n = Math.ceil(buf.duration * PEAK_RATE), peaks = new Float32Array(n);
@@ -513,7 +534,7 @@ async function registerMedia(m) {       // lengkapi objek media (baru atau hasil
   if (m.kind === 'audio') makePeaks(m);
 }
 async function importFiles(files, only) {
-  let added = 0, lastId = null;
+  let added = 0, lastId = null; if (files.length) toast('Membuka berkas…');
   for (const f of files) {
     const kind = kindOf(f);
     if (!kind || (only && kind !== only)) { toast(`"${f.name}" dilewati: jenis berkas tidak cocok`); continue; }
@@ -561,9 +582,30 @@ function ensureAC() {
     players.forEach(wirePlayer);
   } catch (e) { AC = null; console.warn('Web Audio tidak tersedia', e); }
 }
+function makePitch(ctx) {   // penggeser nada: dua jalur delay yang dimodulasi gergaji, disambung dengan jendela Hann
+  const T = 0.1, sr = ctx.sampleRate, n = Math.round(sr * T), saw = ctx.createBuffer(1, n, sr), win = ctx.createBuffer(1, n, sr);
+  const sd = saw.getChannelData(0), wd = win.getChannelData(0); for (let i = 0; i < n; i++) { sd[i] = i / n; wd[i] = .5 - .5 * Math.cos(2 * Math.PI * i / n); }
+  const input = ctx.createGain(), output = ctx.createGain(), dry = ctx.createGain(), wet = ctx.createGain(), delays = [], depths = [];
+  input.connect(dry); dry.connect(output); wet.connect(output); wet.gain.value = 0;
+  for (let k = 0; k < 2; k++) {
+    const d = ctx.createDelay(1), g = ctx.createGain(), dep = ctx.createGain(), s1 = ctx.createBufferSource(), s2 = ctx.createBufferSource(); g.gain.value = 0; dep.gain.value = 0;
+    s1.buffer = saw; s1.loop = true; s1.connect(dep); dep.connect(d.delayTime); s2.buffer = win; s2.loop = true; s2.connect(g.gain);
+    input.connect(d); d.connect(g); g.connect(wet); const at = ctx.currentTime + k * T / 2; s1.start(at); s2.start(at); delays.push(d); depths.push(dep);
+  }
+  let cur = 0;
+  return { input, output, set(semi) { if (semi === cur) return; cur = semi; const slope = 1 - Math.pow(2, semi / 12), sweep = Math.abs(slope) * T; dry.gain.value = semi ? 0 : 1; wet.gain.value = semi ? 1 : 0; for (let k = 0; k < 2; k++) { delays[k].delayTime.value = slope < 0 ? sweep : 0; depths[k].gain.value = slope < 0 ? -sweep : sweep; } } };
+}
+function audioChain(ctx) {
+  const bq = (type, f) => { const b = ctx.createBiquadFilter(); b.type = type; b.frequency.value = f; b.gain.value = 0; return b; };
+  const lo = bq('lowshelf', 200), mid = bq('peaking', 1000), hi = bq('highshelf', 4000), pitch = makePitch(ctx), ring = ctx.createGain(), osc = ctx.createOscillator(), od = ctx.createGain();
+  mid.Q.value = .9; osc.frequency.value = 60; od.gain.value = 0; osc.connect(od); od.connect(ring.gain); osc.start();
+  lo.connect(mid); mid.connect(hi); hi.connect(pitch.input); pitch.output.connect(ring);
+  let key = '';
+  return { input: lo, output: ring, set(c) { const e = c.eq || {}, k = [e.low, e.mid, e.high, c.pitch, c.robot].join(); if (k === key) return; key = k; lo.gain.value = e.low || 0; mid.gain.value = e.mid || 0; hi.gain.value = e.high || 0; pitch.set(c.pitch || 0); od.gain.value = c.robot ? 1 : 0; ring.gain.value = c.robot ? 0 : 1; } };
+}
 function wirePlayer(p) {
   if (!AC || p.gain) return;
-  try { p.node = AC.createMediaElementSource(p.el); p.gain = AC.createGain(); p.node.connect(p.gain); p.gain.connect(master); p.el.volume = 1; } catch (e) { console.warn(e); }
+  try { p.node = AC.createMediaElementSource(p.el); p.gain = AC.createGain(); p.chain = audioChain(AC); p.node.connect(p.chain.input); p.chain.output.connect(p.gain); p.gain.connect(master); p.el.volume = 1; } catch (e) { console.warn(e); }
 }
 // klip bersebelahan di trek utama memakai elemen berbeda supaya keduanya bisa tampil saat transisi
 const pkey = (clip, track) => clip.mediaId + '|' + track.id + '|' + (track.type === 'main' ? track.clips.indexOf(clip) % 2 : 0);
@@ -600,7 +642,7 @@ function syncPlayers(t, playing) {
   for (const { clip, track, ghost } of activeAV(t)) {
     const p = getPlayer(clip, track), el = p.el, want = srcTime(clip, t), hold = ghost || !!clip.reverse;
     active.add(p);
-    setVol(p, clip.muted || hold ? 0 : Math.max(0, gv(clip, 'volume', t)));
+    setVol(p, clip.muted || hold ? 0 : effVol(clip, t)); if (p.chain) p.chain.set(clip);
     if (playing && !hold) {
       try { const r = clamp(instSpeed(clip, t - clip.start), 0.1, 10); if (Math.abs(el.playbackRate - r) > 0.01) el.playbackRate = r; } catch (e) {}
       if (el.paused) { if (Math.abs(el.currentTime - want) > 0.05) el.currentTime = want; el.play().catch(() => {}); }
@@ -730,9 +772,18 @@ const Z4C = { l: 0, t: 0, r: 0, b: 0 };
 function mediaDims(c) { const m = mediaOf(c); if (!m || !m.w) return null; const cr = c.crop || Z4C; return { w: m.w * (1 - cr.l - cr.r), h: m.h * (1 - cr.t - cr.b) }; }
 /* teks → kanvas 2D → tekstur (di-cache per klip) */
 const textCache = new Map(); let fontEpoch = 0;
+const MCTX = document.createElement('canvas').getContext('2d'), WRAP = new Map();
+function wrapText(t, k) {   // pecah baris; caption dibungkus otomatis sesuai lebar kanvas
+  const raw = (t.content || ' ').split('\n'); if (!t.maxW) return raw;
+  const key = [t.content, t.font, t.size, t.weight, t.spacing, t.maxW, LG.W, fontEpoch].join('|'); let out = WRAP.get(key); if (out) return out;
+  const px = t.size * LG.H, max = t.maxW * LG.W, sp = (t.spacing || 0) * px; MCTX.font = `${t.weight || 700} ${px}px "${t.font}",system-ui,sans-serif`;
+  const wd = str => MCTX.measureText(str).width + sp * Array.from(str).length; out = [];
+  for (const line of raw) { let cur = ''; for (const word of line.split(' ')) { const nx = cur ? cur + ' ' + word : word; if (cur && wd(nx) > max) { out.push(cur); cur = word; } else cur = nx; } out.push(cur); }
+  if (WRAP.size > 300) WRAP.clear(); WRAP.set(key, out); return out;
+}
 function textEntry(c) {
   const q = (gl ? glc.height : LG.H) / LG.H, rs = clamp(Math.ceil(gv(c, 'scale')), 1, 3);
-  const t = c.text, lines = (t.content || ' ').split('\n').map(l => Array.from(l)), total = lines.reduce((a, l) => a + l.length, 0);
+  const t = textOf(c), lines = wrapText(t).map(l => Array.from(l)), total = lines.reduce((a, l) => a + l.length, 0);
   const am = c.anim && c.anim.in || c.anim && c.anim.out ? animMod(c, RT) : null, shown = am ? Math.round(total * clamp(am.chars, 0, 1)) : total;
   const key = JSON.stringify(t) + '|' + q.toFixed(3) + '|' + rs + '|' + fontEpoch + '|' + shown;
   let e = textCache.get(c.id);
@@ -787,6 +838,7 @@ const entryOf = c => c.type === 'sticker' ? stickerEntry(c) : textEntry(c);
 function loadFont(name) { if (document.fonts && document.fonts.load) document.fonts.load(`700 32px "${name}"`).then(() => { fontEpoch++; requestRender(); }).catch(() => {}); }
 function layerBox(c) {
   const { W, H } = LG; let w, hh; const sc = gv(c, 'scale');
+  if (c.type === 'caption') { const e = textEntry(c); return { cx: W / 2, cy: H / 2 + capStyle().y * H, w: e.w, h: e.h, rot: 0 }; }
   if (c.type === 'text' || c.type === 'sticker') { const e = entryOf(c); w = e.w * sc; hh = e.h * sc; }
   else { const d = mediaDims(c); if (!d) return null; const s = Math.min(W / d.w, H / d.h) * sc; w = d.w * s; hh = d.h * s; }
   return { cx: W / 2 + gv(c, 'x') * W, cy: H / 2 + gv(c, 'y') * H, w, h: hh, rot: gv(c, 'rot') * Math.PI / 180 };
@@ -794,7 +846,7 @@ function layerBox(c) {
 const inRange = (c, t) => t >= c.start - 1e-6 && t < c.start + c.dur - 1e-6;
 function visualLayers(t) {   // lapisan yang bisa disentuh di pratinjau (tanpa pengubah transisi)
   const out = [];
-  for (const type of ['main', 'overlay', 'sticker', 'text']) for (const track of P().tracks) if (track.type === type)
+  for (const type of ['main', 'overlay', 'sticker', 'text', 'caption']) for (const track of P().tracks) if (track.type === type)
     for (const clip of track.clips) if (inRange(clip, t)) out.push({ clip, track });
   return out;
 }
@@ -804,12 +856,12 @@ function sceneLayers(t) {    // lapisan untuk digambar, termasuk dua klip yang s
     const m = (TRANSITIONS[w.type] || TRANSITIONS.dissolve).f(w.p), la = { clip: w.A, track: main, mod: m.a || {} }, lb = { clip: w.B, track: main, mod: m.b || {} };
     if (m.aTop) out.push(lb, la); else out.push(la, lb);
   } else for (const clip of main.clips) if (inRange(clip, t)) out.push({ clip, track: main });
-  for (const type of ['overlay', 'sticker', 'text']) for (const track of P().tracks) if (track.type === type)
+  for (const type of ['overlay', 'sticker', 'text', 'caption']) for (const track of P().tracks) if (track.type === type)
     for (const clip of track.clips) if (inRange(clip, t)) out.push({ clip, track });
   return out;
 }
 function layerTex(clip, track) {
-  if (clip.type === 'text' || clip.type === 'sticker') { const e = entryOf(clip); if (e.dirty) { e.tex = e.tex || mkTex(); upload(e.tex, e.cv); e.dirty = false; } return { tex: e.tex, tw: e.cv.width, th: e.cv.height }; }
+  if (clip.type === 'text' || clip.type === 'sticker' || clip.type === 'caption') { const e = entryOf(clip); if (e.dirty) { e.tex = e.tex || mkTex(); upload(e.tex, e.cv); e.dirty = false; } return { tex: e.tex, tw: e.cv.width, th: e.cv.height }; }
   const m = mediaOf(clip); if (!m) return null;
   if (m.kind === 'image') { if (!m.img) return null; if (!m.tex) { m.tex = mkTex(); upload(m.tex, m.img); } return { tex: m.tex, tw: m.img.width, th: m.img.height }; }
   const p = getPlayer(clip, track);
@@ -891,7 +943,7 @@ function sizePreview() {
 }
 function updateSelBox() {
   const box = $('#selbox'), c = selClip(), t = visTime(S.time);
-  const b = c && isVisual(c) && t >= c.start - 1e-6 && t < c.start + c.dur && !S.exporting ? layerBox(c) : null;
+  const b = c && (isVisual(c) || c.type === 'caption') && t >= c.start - 1e-6 && t < c.start + c.dur && !S.exporting ? layerBox(c) : null;
   if (!b) { box.hidden = true; return; }
   const k = $('#wrap').clientWidth / LG.W;
   box.hidden = false; box.style.width = b.w * k + 'px'; box.style.height = b.h * k + 'px';
@@ -903,7 +955,7 @@ const tlc = $('#tl'), tctx = tlc.getContext('2d');
 const TV = { w: 0, h: 0, dpr: 1 };
 let C = {};
 function readColors() {
-  for (const k of ['bg', 'lane', 'text', 'text-dim', 'text-faint', 'accent', 'clip-video', 'clip-image', 'clip-text', 'clip-audio', 'clip-fx', 'clip-sticker', 'clip-ink', 'handle', 'handle-ink', 'line', 'warn']) C[k] = css('--' + k);
+  for (const k of ['bg', 'lane', 'text', 'text-dim', 'text-faint', 'accent', 'clip-video', 'clip-image', 'clip-text', 'clip-audio', 'clip-fx', 'clip-sticker', 'clip-caption', 'clip-ink', 'handle', 'handle-ink', 'line', 'warn']) C[k] = css('--' + k);
 }
 function sizeTimeline() {
   const r = $('#tlWrap').getBoundingClientRect(); TV.dpr = Math.min(devicePixelRatio || 1, 2.5); TV.w = r.width; TV.h = r.height;
@@ -917,9 +969,9 @@ function rows() {
   return out;
 }
 function rr(ctx, x, y, w, hh, r) { r = Math.min(r, w / 2, hh / 2); ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + hh, r); ctx.arcTo(x + w, y + hh, x, y + hh, r); ctx.arcTo(x, y + hh, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
-function clipLabel(c) { if (c.type === 'sticker') return c.st.kind === 'emoji' ? c.st.ch : SHAPES[c.st.shape] || 'Bentuk'; if (c.type === 'fx') return FX[c.fx.kind] || 'Efek'; if (c.type === 'text') return c.text.content.replace(/\n/g, ' '); const m = mediaOf(c); return (m ? m.name : 'Media hilang') + (c.speed !== 1 ? `  ${+c.speed.toFixed(2)}x` : ''); }
+function clipLabel(c) { if (c.type === 'caption') return c.cap.replace(/\n/g, ' '); if (c.type === 'sticker') return c.st.kind === 'emoji' ? c.st.ch : SHAPES[c.st.shape] || 'Bentuk'; if (c.type === 'fx') return FX[c.fx.kind] || 'Efek'; if (c.type === 'text') return c.text.content.replace(/\n/g, ' '); const m = mediaOf(c); return (m ? m.name : 'Media hilang') + (c.speed !== 1 ? `  ${+c.speed.toFixed(2)}x` : ''); }
 function drawClip(ctx, c, x0, y, w, hh, selected, alpha) {
-  const colors = { video: C['clip-video'], image: C['clip-image'], text: C['clip-text'], audio: C['clip-audio'], fx: C['clip-fx'], sticker: C['clip-sticker'] };
+  const colors = { video: C['clip-video'], image: C['clip-image'], text: C['clip-text'], audio: C['clip-audio'], fx: C['clip-fx'], sticker: C['clip-sticker'], caption: C['clip-caption'] };
   const m = c.mediaId ? mediaOf(c) : null, vx0 = Math.max(x0, -20), vx1 = Math.min(x0 + w, TV.w + 20);
   ctx.save(); ctx.globalAlpha = alpha; rr(ctx, x0 + .5, y, Math.max(2, w - 1), hh, 6); ctx.fillStyle = colors[c.type]; ctx.fill(); ctx.clip();
   if (m && m.thumbs && m.thumbs.length && (c.type === 'video' || c.type === 'image')) {
@@ -990,6 +1042,7 @@ function drawTimeline() {
   }
   if (!mainTrack().clips.length) { ctx.fillStyle = C['text-faint']; ctx.font = `13px ${css('--font')}`; ctx.textBaseline = 'middle'; ctx.fillText('Trek utama masih kosong', tX(0) + 12, RULER_H + 6 - S.scrollY + (rws.find(r => r.track.type === 'main')?.y - (RULER_H + 6 - S.scrollY) || 0) + ROW_H.main / 2); }
   if (TL.snapT != null) { ctx.fillStyle = C.accent; ctx.fillRect(tX(TL.snapT) - .5, RULER_H, 1, hh); }
+  for (const b of P().beats || []) { const x = tX(b); if (x < -4 || x > w + 4) continue; ctx.fillStyle = C.warn; ctx.globalAlpha = .35; ctx.fillRect(x - .5, RULER_H, 1, hh); ctx.globalAlpha = 1; ctx.beginPath(); ctx.arc(x, RULER_H + 3, 3, 0, 7); ctx.fill(); }
   // penggaris
   ctx.fillStyle = C.bg; ctx.fillRect(0, 0, w, RULER_H);
   const steps = [0.1, 0.25, 0.5, 1, 2, 5, 10, 15, 30, 60, 120, 300, 600]; const step = steps.find(s => s * S.pps >= 56) || 600;
@@ -1024,7 +1077,7 @@ function hitTL(x, y) {
 function snapTime(t, exceptId) {
   let best = null, bd = 9 / S.pps;
   const test = v => { const d = Math.abs(v - t); if (d < bd) { bd = d; best = v; } };
-  test(0); test(S.time);
+  test(0); test(S.time); for (const b of P().beats || []) test(b);
   for (const tr of P().tracks) for (const c of tr.clips) if (c.id !== exceptId) { test(c.start); test(c.start + c.dur); }
   return best;
 }
@@ -1033,10 +1086,10 @@ let inertiaRAF = 0;
 function tlPos(e) { const r = tlc.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; }
 function setZoom(pps) { S.pps = clamp(pps, 4, 480); requestRender(); }
 function seek(t) { S.time = clamp(t, 0, duration()); if (S.playing) { S.playT0 = S.time; S.playN0 = performance.now(); } requestRender(); }
-function beginTrim(hit) { pause(); TL.mode = 'trim'; TL.side = hit.zone; TL.o = clone(hit.clip); TL.track = hit.track; TL.main = hit.track.type === 'main'; TL.time0 = S.time; }
-function beginMove(hit) { pause(); select(hit.clip.id); TL.mode = 'move'; TL.o = clone(hit.clip); TL.track = hit.track; TL.main = hit.track.type === 'main'; TL.ghostX = tX(hit.clip.start); TL.insertX = TL.ghostX; TL.insertIdx = hit.track.clips.indexOf(hit.clip); }
+function beginTrim(hit) { pause(); TL.mode = 'trim'; TL.side = hit.zone; TL.o = clone(hit.clip); TL.track = hit.track; TL.main = hit.track.type === 'main'; TL.time0 = TL.t0 = S.time; }
+function beginMove(hit) { pause(); select(hit.clip.id); TL.mode = 'move'; TL.o = clone(hit.clip); TL.track = hit.track; TL.main = hit.track.type === 'main'; TL.ghostX = tX(hit.clip.start); TL.insertX = TL.ghostX; TL.insertIdx = hit.track.clips.indexOf(hit.clip); TL.t0 = S.time; }
 function doTrim(dx) {
-  const c = selClip(), o = TL.o, m = c.mediaId ? mediaOf(c) : null, sp = o.speed, timed = hasMediaTime(c) && !!m, rev = !!o.reverse; let d = dx / S.pps; TL.snapT = null;
+  const c = selClip(), o = TL.o, m = c.mediaId ? mediaOf(c) : null, sp = o.speed, timed = hasMediaTime(c) && !!m, rev = !!o.reverse; let d = dx / S.pps + (TL.side === 'r' ? S.time - TL.t0 : 0); TL.snapT = null;
   const sibs = TL.track.clips.filter(k => k.id !== c.id);
   if (TL.side === 'l') {
     if (!TL.main) { const s = snapTime(o.start + d, c.id); if (s != null) { d = s - o.start; TL.snapT = s; } }
@@ -1065,11 +1118,20 @@ function doMove(x, dx) {
     let idx = 0; for (const k of others) if (x > tX(k.start + k.dur / 2)) idx++;
     TL.insertIdx = idx; TL.insertX = idx < others.length ? tX(others[idx].start) : tX(others.length ? others[idx - 1].start + others[idx - 1].dur : 0);
   } else {
-    let ns = o.start + dx / S.pps; const s1 = snapTime(ns, c.id), s2 = snapTime(ns + o.dur, c.id);
+    let ns = o.start + dx / S.pps + (S.time - TL.t0); const s1 = snapTime(ns, c.id), s2 = snapTime(ns + o.dur, c.id);
     if (s1 != null) { ns = s1; TL.snapT = s1; } else if (s2 != null) { ns = s2 - o.dur; TL.snapT = s2; }
     c.start = Math.max(0, ns);
   }
   requestRender();
+}
+let autoLast = 0;
+function tlAuto(now) {   // gulir otomatis saat klip diseret ke tepi timeline
+  const dt = Math.min(50, now - autoLast); autoLast = now;
+  if (!(TL.mode === 'move' || (TL.mode === 'trim' && TL.side === 'r')) || TL.px == null || !TL.start) return;
+  const edge = 44; let v = 0; if (TL.px < edge) v = -(edge - TL.px) / edge; else if (TL.px > TV.w - edge) v = (TL.px - (TV.w - edge)) / edge;
+  if (!v) return;
+  S.time = clamp(S.time + v * dt / 1000 * TV.w * .9 / S.pps, 0, duration() + 30);
+  const dx = TL.px - TL.start.x; if (TL.mode === 'move') doMove(TL.px, dx); else doTrim(dx);
 }
 function endDrag() {
   if (TL.mode === 'move' && TL.main) { const mt = mainTrack(), c = selClip(); mt.clips = mt.clips.filter(k => k.id !== c.id); mt.clips.splice(TL.insertIdx, 0, c); }
@@ -1091,7 +1153,7 @@ tlc.addEventListener('pointerdown', e => {
 });
 tlc.addEventListener('pointermove', e => {
   if (!TL.ptrs.has(e.pointerId)) return;
-  const p = tlPos(e); TL.ptrs.set(e.pointerId, p);
+  const p = tlPos(e); TL.ptrs.set(e.pointerId, p); TL.px = p.x;
   if (TL.mode === 'pinch') { if (TL.ptrs.size >= 2) { const [a, b] = [...TL.ptrs.values()]; setZoom(TL.pps0 * Math.max(10, Math.abs(a.x - b.x)) / TL.d0); } return; }
   if (!TL.start) return;
   const dx = p.x - TL.start.x, dy = p.y - TL.start.y;
@@ -1153,7 +1215,7 @@ wrap.addEventListener('pointerdown', e => {
   PV.ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
   if (PV.ptrs.size === 2) { const c = selClip(); if (c && isVisual(c)) { const [a, b] = [...PV.ptrs.values()]; PV.mode = 'pinch'; PV.o = { scale: gv(c, 'scale'), rot: gv(c, 'rot'), d: Math.hypot(a.x - b.x, a.y - b.y) || 1, a: Math.atan2(b.y - a.y, b.x - a.x) }; PV.changed = true; } return; }
   const hit = hitPreview(e); PV.start = { x: e.clientX, y: e.clientY }; PV.moved = false; PV.changed = false;
-  if (hit) { if (S.sel !== hit.id) select(hit.id); PV.mode = 'drag'; PV.o = { x: gv(hit, 'x'), y: gv(hit, 'y') }; } else PV.mode = 'tap';
+  if (hit) { if (S.sel !== hit.id) select(hit.id); PV.mode = 'drag'; PV.o = { x: gv(hit, 'x'), y: hit.type === 'caption' ? capStyle().y : gv(hit, 'y') }; } else PV.mode = 'tap';
 });
 wrap.addEventListener('pointermove', e => {
   if (!PV.ptrs.has(e.pointerId)) return; PV.ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
@@ -1166,7 +1228,7 @@ wrap.addEventListener('pointermove', e => {
   } else if (PV.mode === 'drag') {
     const dx = e.clientX - PV.start.x, dy = e.clientY - PV.start.y; if (!PV.moved && Math.hypot(dx, dy) < 4) return; PV.moved = PV.changed = true;
     const r = wrap.getBoundingClientRect(); let nx = PV.o.x + dx / r.width, ny = PV.o.y + dy / r.height;
-    if (Math.abs(nx) < .012) nx = 0; if (Math.abs(ny) < .012) ny = 0; setProp(c, 'x', nx); setProp(c, 'y', ny); requestRender();
+    if (Math.abs(nx) < .012) nx = 0; if (Math.abs(ny) < .012) ny = 0; if (c.type === 'caption') capStyle().y = clamp(ny, -.47, .47); else { setProp(c, 'x', nx); setProp(c, 'y', ny); } requestRender();
   }
 });
 function pvUp(e) {
@@ -1193,6 +1255,7 @@ function play() {
 function pause() { if (!S.playing) return; S.playing = false; refreshTransport(); requestRender(); }
 function loop(now) {
   if (S.exporting !== 'offline') {
+    tlAuto(now);
     if (S.playing) { S.time = S.playT0 + (now - S.playN0) / 1000; const d = duration(); if (S.time >= d) { S.time = d; S.playing = false; refreshTransport(); } needRender = true; }
     if (needRender) {
       needRender = false;
@@ -1239,9 +1302,39 @@ function addText() {
   placeClip(c, 'text'); S.sel = c.id; commit(); sheetText();
 }
 function addSticker(st) { const c = baseClip('sticker', { start: S.time, dur: 3, st }); placeClip(c, 'sticker'); S.sel = c.id; commit(); }
+function separateAudio() {
+  const f = findClip(S.sel); if (!f || f.clip.type !== 'video') return; const c = f.clip;
+  if (c.reverse) { toast('Klip mundur tidak punya suara untuk dipisah'); return; }
+  const a = baseClip('audio', { mediaId: c.mediaId, start: c.start, dur: c.dur, in: c.in, speed: c.speed, volume: c.volume });
+  for (const k of ['curve', 'eq', 'pitch', 'robot', 'fadeIn', 'fadeOut']) if (c[k] != null) a[k] = clone(c[k]);
+  c.muted = true; placeClip(a, 'audio'); commit(); toast('Suara dipindah ke trek audio, suara asli video dibisukan');
+}
+function addBeat() { const b = P().beats = P().beats || [], t = +S.time.toFixed(3); if (b.some(x => Math.abs(x - t) < .06)) return; b.push(t); b.sort((x, y) => x - y); commit(); const n = $('#beatCount'); if (n) n.textContent = b.length + ' penanda'; }
+function addCaption() { const c = baseClip('caption', { start: S.time, dur: 2, cap: 'Tulis caption' }); placeClip(c, 'caption'); commit(); sheetCaptions(); }
+const srtTime = t => { const ms = Math.round(t * 1000), p = (v, n) => String(v).padStart(n, '0'); return `${p(Math.floor(ms / 3600000), 2)}:${p(Math.floor(ms / 60000) % 60, 2)}:${p(Math.floor(ms / 1000) % 60, 2)},${p(ms % 1000, 3)}`; };
+function exportSRT() {
+  const list = capClips(); if (!list.length) { toast('Belum ada caption untuk diekspor'); return; }
+  const txt = list.map((c, i) => `${i + 1}\n${srtTime(c.start)} --> ${srtTime(c.start + c.dur)}\n${c.cap}\n`).join('\n');
+  const a = h('a', { href: URL.createObjectURL(new Blob([txt], { type: 'application/x-subrip' })), download: APP_NAME.toLowerCase() + '-caption.srt' }); document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+}
+function parseSRT(txt) {
+  const out = [], re = /(\d+):(\d+):(\d+)[,.](\d+)\s*-->\s*(\d+):(\d+):(\d+)[,.](\d+)/;
+  for (const block of txt.replace(/\r/g, '').split(/\n\s*\n/)) {
+    const lines = block.split('\n'), i = lines.findIndex(l => re.test(l)); if (i < 0) continue; const m = lines[i].match(re).slice(1).map(Number);
+    const a = m[0] * 3600 + m[1] * 60 + m[2] + m[3] / 1000, b = m[4] * 3600 + m[5] * 60 + m[6] + m[7] / 1000, cap = lines.slice(i + 1).join('\n').replace(/<[^>]+>/g, '').trim();
+    if (cap && b > a) out.push({ start: a, dur: b - a, cap });
+  }
+  return out;
+}
+function importSRT() {
+  const inp = $('#file'); inp.accept = '.srt,text/plain'; inp.value = '';
+  inp.onchange = async () => { const f = inp.files[0]; if (!f) return; const rows = parseSRT(await f.text()); if (!rows.length) { toast('Tidak ada baris caption yang terbaca di berkas itu'); return; } rows.forEach(r => placeClip(baseClip('caption', r), 'caption')); commit(); toast(rows.length + ' baris caption diimpor'); sheetCaptions(); };
+  inp.click();
+}
+function parseTime(str) { const parts = String(str).trim().replace(',', '.').split(':').map(Number); return parts.length && !parts.some(isNaN) ? parts.reduce((a, v) => a * 60 + v, 0) : null; }
 function addFx(kind) { const c = baseClip('fx', { start: S.time, dur: 3, fx: { kind, amt: .6 } }); placeClip(c, 'fx'); S.sel = c.id; commit(); sheetFx(); }
 function toggleKf() {
-  const c = selClip(); if (!c || c.type === 'fx') return; const lt = S.time - c.start;
+  const c = selClip(); if (!c || c.type === 'fx' || c.type === 'caption') return; const lt = S.time - c.start;
   if (lt < -1e-3 || lt > c.dur + 1e-3) { toast('Geser garis putar ke atas klip yang dipilih'); return; }
   const k = kfAt(c, lt);
   if (k) { c.kfs = c.kfs.filter(x => x !== k); if (!c.kfs.length) { for (const p of KF_PROPS) c[p] = k[p]; delete c.kfs; } }
@@ -1287,6 +1380,8 @@ function refreshUI() {
       tool('sticker', 'Stiker', sheetSticker),
       tool('music', 'Audio', () => pickFiles('audio/*,.mp3,.wav,.m4a,.aac,.ogg', 'audio')),
       tool('fx', 'Efek', sheetFx),
+      tool('caption', 'Caption', sheetCaptions),
+      tool('beat', 'Ketukan', sheetBeats),
       tool('split', 'Pisah', splitAtPlayhead),
       tool('layers', 'Rasio', sheetRatio),
       tool('image', 'Latar', sheetBg));
@@ -1296,15 +1391,17 @@ function refreshUI() {
     if (c.type === 'text') tb.append(tool('edit', 'Edit', sheetText), tool('style', 'Gaya', sheetStyle));
     if (c.type === 'sticker') tb.append(tool('sticker', 'Ganti', sheetSticker));
     if (c.type === 'fx') tb.append(tool('fx', 'Atur efek', sheetFx));
+    if (c.type === 'caption') tb.append(tool('edit', 'Edit', () => { select(null); sheetCaptions(); }));
     tb.append(tool('split', 'Pisah', splitAtPlayhead));
-    if (hasMediaTime(c)) tb.append(tool('speed', 'Kecepatan', sheetSpeed), tool('volume', 'Volume', sheetVolume));
+    if (hasMediaTime(c)) tb.append(tool('speed', 'Kecepatan', sheetSpeed), tool('volume', 'Volume', sheetVolume), tool('voice', 'Suara', sheetVoice));
+    if (c.type === 'video') tb.append(tool('detach', 'Pisah audio', separateAudio));
     if (media) tb.append(tool('filter', 'Filter', sheetFilter), tool('adjust', 'Atur warna', sheetAdjust));
     if (isVisual(c)) tb.append(tool('move', 'Ubah', sheetTransform));
     if (media) tb.append(tool('crop', 'Potong', sheetCrop));
     if (isVisual(c)) tb.append(tool('anim', 'Animasi', sheetAnim));
     if (media) tb.append(tool('chroma', 'Kunci warna', sheetChroma));
     if (isVisual(c)) tb.append(tool('mask', 'Mask', sheetMask), tool('blend', 'Campur', sheetBlend));
-    if (c.type !== 'fx') tb.append(tool('kf', 'Keyframe', sheetKeyframe));
+    if (c.type !== 'fx' && c.type !== 'caption') tb.append(tool('kf', 'Keyframe', sheetKeyframe));
     if (c.type === 'video') tb.append(tool('freeze', 'Bekukan', freezeFrame), tool('reverse', c.reverse ? 'Maju' : 'Mundur', toggleReverse));
     if (media) tb.append(tool('layers', onMain ? 'Jadi overlay' : 'Ke trek utama', toggleOverlay));
     tb.append(tool('copy', 'Duplikat', duplicateSel), tool('trash', 'Hapus', deleteSel, 'danger'));
@@ -1312,7 +1409,7 @@ function refreshUI() {
   }
   if (S.sheetFor !== undefined && S.sheetFor !== S.sel) closeSheet();
   $('#btnUndo').disabled = !Hist.undo.length; $('#btnRedo').disabled = !Hist.redo.length;
-  $('#btnRatio').textContent = P().ratio; $('#btnKf').hidden = !c || c.type === 'fx';
+  $('#btnRatio').textContent = P().ratio; $('#btnKf').hidden = !c || c.type === 'fx' || c.type === 'caption';
   const any = P().tracks.some(t => t.clips.length); $('#empty').hidden = any; $('#btnExport').disabled = !any;
 }
 function openSheet(title, kids, forClip) {
@@ -1372,9 +1469,62 @@ function sheetSpeed() {
     spark, info], true);
 }
 function sheetVolume() {
-  const c = selClip(); if (!c) return;
-  const mute = h('button', { class: 'chip', 'aria-pressed': String(c.muted) }, 'Bisukan'); mute.onclick = () => { c.muted = !c.muted; mute.setAttribute('aria-pressed', String(c.muted)); commit(); };
-  openSheet('Volume', [slider('Volume', { min: 0, max: 2, step: .01, value: gv(c, 'volume', S.time), fmt: v => Math.round(v * 100) + '%', on: v => setProp(c, 'volume', v) }), h('div', { class: 'row' }, mute)], true);
+  const c = selClip(); if (!c) return; const maxF = Math.max(.1, Math.min(5, c.dur / 2));
+  const mute = toggleChip('Bisukan', c.muted, v => { c.muted = v; commit(); });
+  const fade = (label, k) => slider(label, { min: 0, max: +maxF.toFixed(1), step: .1, value: Math.min(maxF, c[k] || 0), fmt: v => (+v).toFixed(1) + ' dtk', on: v => { if (v > 0) c[k] = v; else delete c[k]; } });
+  openSheet('Volume', [slider('Volume', { min: 0, max: 2, step: .01, value: gv(c, 'volume', S.time), fmt: v => Math.round(v * 100) + '%', on: v => setProp(c, 'volume', v) }),
+    fade('Fade masuk', 'fadeIn'), fade('Fade keluar', 'fadeOut'), h('div', { class: 'row' }, mute)], true);
+}
+function sheetVoice() {
+  const c = selClip(); if (!c) return; const e = c.eq || {};
+  const cur = c.robot ? 'robot' : (VOICES.find(v => v[0] !== 'robot' && v[2] === (c.pitch || 0)) || [null])[0];
+  const eq = (label, k) => slider(label, { min: -12, max: 12, step: 1, value: e[k] || 0, fmt: v => (v > 0 ? '+' : '') + v + ' dB', on: v => { (c.eq = c.eq || {})[k] = v; } });
+  openSheet('Suara', [
+    h('p', { class: 'group-l' }, 'Pengubah suara'),
+    chips(VOICES.map(v => [v[0], v[1]]), cur, id => { const v = VOICES.find(x => x[0] === id); if (id === 'robot') c.robot = true; else delete c.robot; if (v[2]) c.pitch = v[2]; else delete c.pitch; commit(); sheetVoice(); }, true),
+    slider('Nada', { min: -12, max: 12, step: 1, value: c.pitch || 0, fmt: v => (v > 0 ? '+' : '') + v, on: v => { if (v) c.pitch = v; else delete c.pitch; } }),
+    h('p', { class: 'group-l' }, 'Equalizer'), eq('Bas', 'low'), eq('Tengah', 'mid'), eq('Trebel', 'high'),
+    h('div', { class: 'row' }, h('button', { class: 'chip', onclick: () => { delete c.eq; delete c.pitch; delete c.robot; commit(); sheetVoice(); } }, 'Atur ulang')),
+    h('p', { class: 'hint' }, 'Putar video untuk mendengar hasilnya. Nada digeser tanpa mengubah kecepatan.')], true);
+}
+function sheetBeats() {
+  const tap = h('button', { class: 'btn primary wide' }, 'Ketuk'); tap.addEventListener('pointerdown', e => { e.preventDefault(); addBeat(); });
+  const near = () => { const b = P().beats || []; if (!b.length) return; let i = 0; b.forEach((x, j) => { if (Math.abs(x - S.time) < Math.abs(b[i] - S.time)) i = j; }); b.splice(i, 1); commit(); sheetBeats(); };
+  openSheet('Penanda ketukan', [tap,
+    h('div', { class: 'row' }, h('span', { id: 'beatCount', class: 'hint' }, (P().beats || []).length + ' penanda'), h('div', { class: 'grow' }),
+      h('button', { class: 'chip', onclick: near }, 'Hapus terdekat'), h('button', { class: 'chip', onclick: () => { delete P().beats; commit(); sheetBeats(); } }, 'Hapus semua')),
+    h('p', { class: 'hint' }, 'Putar musik, lalu ketuk tombol mengikuti irama (di keyboard: tombol B). Saat klip digeser atau dipangkas, ujungnya menempel ke penanda.')]);
+}
+function sheetCaptions() {
+  const list = capClips(), btn = (label, fn) => h('button', { class: 'chip', onclick: fn }, label);
+  const rowsEl = list.map(c => {
+    const st = h('input', { type: 'text', value: fmtTime(c.start), 'aria-label': 'Waktu mulai', inputmode: 'decimal' }), en = h('input', { type: 'text', value: fmtTime(c.start + c.dur), 'aria-label': 'Waktu selesai', inputmode: 'decimal' });
+    const tx = h('textarea', { rows: 1, 'aria-label': 'Teks caption' }); tx.value = c.cap;
+    tx.oninput = () => { c.cap = tx.value; requestRender(); }; tx.onchange = () => commit(); tx.onfocus = () => { pause(); seek(c.start + .01); };
+    st.onchange = en.onchange = () => { const a = parseTime(st.value), b = parseTime(en.value); if (a == null || b == null || b <= a) toast('Waktu tidak valid. Contoh: 00:05.5'); else { c.start = Math.max(0, a); c.dur = Math.max(MIN_DUR, b - a); commit(); } sheetCaptions(); };
+    return h('div', { class: 'caprow' }, st, en, tx, h('button', { class: 'iconbtn', 'aria-label': 'Hapus baris caption', html: ic('trash'), onclick: () => { const f = findClip(c.id); f.track.clips = f.track.clips.filter(k => k !== c); commit(); sheetCaptions(); } }));
+  });
+  openSheet('Caption', [
+    h('div', { class: 'row' }, btn('+ Baris di garis putar', addCaption), btn('Gaya', sheetCapStyle), btn('Impor SRT', importSRT), btn('Ekspor SRT', exportSRT)),
+    ...(rowsEl.length ? rowsEl : [h('p', { class: 'hint' }, 'Belum ada caption. Tambahkan baris di posisi garis putar, atau impor berkas SRT.')]),
+    rowsEl.length ? h('p', { class: 'hint' }, 'Kolom waktu: mulai dan selesai (menit:detik). Seret caption di pratinjau untuk mengatur tinggi posisinya.') : null]);
+}
+function sheetCapStyle() {
+  const t = capStyle(), col = (key) => swatches(t[key], (v, live) => { t[key] = v; if (live) requestRender(); else { commit(); sheetCapStyle(); } });
+  const first = capClips()[0]; if (first && !capClips().some(c => inRange(c, S.time))) { pause(); seek(first.start + .01); }
+  openSheet('Gaya caption', [
+    h('div', { class: 'row' }, h('button', { class: 'chip', onclick: sheetCaptions }, '‹ Daftar caption')),
+    chips(FONTS.map(f => [f, f, `font-family:"${f}",sans-serif`]), t.font, f => { t.font = f; loadFont(f); commit(); }, true),
+    slider('Ukuran', { min: 2, max: 8, step: .5, value: Math.round(t.size * 200) / 2, fmt: v => (+v).toFixed(1), on: v => t.size = v / 100 }),
+    slider('Posisi', { min: -45, max: 45, step: 1, value: Math.round(t.y * 100), on: v => t.y = v / 100 }),
+    h('p', { class: 'group-l' }, 'Warna teks'), col('color'),
+    h('p', { class: 'group-l' }, 'Garis tepi'), slider('Tebal', { min: 0, max: 20, step: 1, value: Math.round(t.ow * 100), on: v => t.ow = v / 100 }), col('oc'),
+    h('p', { class: 'group-l' }, 'Latar'), slider('Opasitas', { min: 0, max: 100, step: 1, value: Math.round(t.bgo * 100), fmt: v => v + '%', on: v => t.bgo = v / 100 }), col('bgc')]);
+}
+function showHelp() {
+  const keys = [['Spasi', 'Putar / jeda'], ['← →', 'Geser satu frame (Shift: satu detik)'], ['Home / End', 'Ke awal / akhir'], ['S', 'Pisah klip di garis putar'], ['Delete', 'Hapus klip terpilih'], ['Ctrl+D', 'Duplikat klip'], ['Ctrl+Z / Ctrl+Shift+Z', 'Urungkan / ulangi'], ['K', 'Tambah atau hapus keyframe'], ['B', 'Tambah penanda ketukan'], ['T', 'Tambah teks'], ['+ / −', 'Zoom timeline (atau Ctrl+scroll)'], ['Esc', 'Tutup panel / lepas pilihan']];
+  const dl = h('dl', { class: 'keys' }); keys.forEach(([k, d]) => dl.append(h('dt', {}, k), h('dd', {}, d)));
+  showModal(h('h2', {}, 'Pintasan keyboard'), dl, h('div', { class: 'row' }, h('div', { class: 'grow' }), h('button', { class: 'btn big', onclick: hideModal }, 'Tutup')));
 }
 function sheetTransform() {
   const c = selClip(); if (!c) return; const d = c.mediaId ? mediaDims(c) : null, t = S.time;
@@ -1543,11 +1693,13 @@ async function mixAudio(dur) {
     const m = mediaOf(c);
     if (!bufs.has(m.id)) { try { bufs.set(m.id, await decodeMedia(m)); } catch (e) { bufs.set(m.id, null); } }
     const buf = bufs.get(m.id); if (!buf) continue;
-    const s = ctx.createBufferSource(), g = ctx.createGain(); s.buffer = buf; s.connect(g); g.connect(ctx.destination);
-    const N = Math.max(2, Math.ceil(c.dur * 30)), sample = fn => { const a = new Float32Array(N); for (let i = 0; i < N; i++) a[i] = fn(c.dur * i / (N - 1)); return a; };
+    const s = ctx.createBufferSource(), g = ctx.createGain(); s.buffer = buf;
+    if (c.eq || c.pitch || c.robot) { const ch = audioChain(ctx); ch.set(c); s.connect(ch.input); ch.output.connect(g); } else s.connect(g);
+    g.connect(ctx.destination);
+    const N = Math.max(2, Math.ceil(c.dur * 60)), sample = fn => { const a = new Float32Array(N); for (let i = 0; i < N; i++) a[i] = fn(c.dur * i / (N - 1)); return a; };
     try {
       if (c.curve) s.playbackRate.setValueCurveAtTime(sample(lt => instSpeed(c, lt)), c.start, c.dur); else s.playbackRate.value = c.speed;
-      if (c.kfs && c.kfs.length) g.gain.setValueCurveAtTime(sample(lt => Math.max(0, gv(c, 'volume', c.start + lt))), c.start, c.dur); else g.gain.value = c.volume;
+      if ((c.kfs && c.kfs.length) || c.fadeIn || c.fadeOut) g.gain.setValueCurveAtTime(sample(lt => effVol(c, c.start + lt)), c.start, c.dur); else g.gain.value = c.volume;
     } catch (e) { s.playbackRate.value = c.speed; g.gain.value = c.volume; }
     s.start(c.start, Math.min(c.in, buf.duration), c.dur * c.speed); s.stop(c.start + c.dur); n++;
   }
@@ -1673,7 +1825,8 @@ $('#btnKf').innerHTML = ic('kf'); $('#btnKf').onclick = toggleKf;
 $('#btnPlay').onclick = () => S.playing ? pause() : play();
 $('#btnZoomIn').onclick = () => setZoom(S.pps * 1.5); $('#btnZoomOut').onclick = () => setZoom(S.pps / 1.5);
 $('#btnImportBig').onclick = () => pickFiles('video/*,image/*,audio/*'); $('#btnSample').onclick = addSample;
-$('#btnRatio').onclick = sheetRatio; $('#btnExport').onclick = exportDialog;
+$('#btnRatio').onclick = sheetRatio; $('#btnExport').onclick = exportDialog; $('#btnHelp').onclick = showHelp;
+$('#btnUndo').title = 'Urungkan (Ctrl+Z)'; $('#btnRedo').title = 'Ulangi (Ctrl+Shift+Z)'; $('#btnPlay').title = 'Putar / jeda (Spasi)'; $('#btnKf').title = 'Keyframe (K)'; $('#btnZoomIn').title = 'Perbesar timeline'; $('#btnZoomOut').title = 'Perkecil timeline';
 $('#btnNew').onclick = async () => {
   if (P().tracks.some(t => t.clips.length) && !confirm('Mulai proyek baru? Proyek yang sekarang akan dihapus dari perangkat ini.')) return;
   pause(); S.project = newProject(); S.media.forEach(m => URL.revokeObjectURL(m.url)); S.media.clear(); prunePlayers(); textCache.clear();
@@ -1695,6 +1848,8 @@ addEventListener('keydown', e => {
   else if (k === '=' || k === '+') setZoom(S.pps * 1.3); else if (k === '-') setZoom(S.pps / 1.3);
   else if (k === 't' && !mod) addText();
   else if (k === 'k' && !mod) toggleKf();
+  else if (k === 'b' && !mod) addBeat();
+  else if (k === '?') showHelp();
   else if (k === 'escape') { if ($('#sheet').classList.contains('open')) closeSheet(); else select(null); }
   else used = false;
   if (used) e.preventDefault();
@@ -1723,7 +1878,7 @@ async function restore() {
   readColors(); initGL(); refreshTransport();
   await restore();
   layoutMain(); fixOverlaps(); Hist.last = JSON.stringify(P());
-  new Set(P().tracks.flatMap(t => t.clips.filter(c => c.type === 'text').map(c => c.text.font)).concat('Poppins')).forEach(loadFont);
+  new Set(P().tracks.flatMap(t => t.clips.filter(c => c.type === 'text').map(c => c.text.font)).concat('Poppins', capStyle().font)).forEach(loadFont);
   if (document.fonts) document.fonts.addEventListener && document.fonts.addEventListener('loadingdone', () => { fontEpoch++; requestRender(); });
   new ResizeObserver(() => { sizePreview(); sizeTimeline(); }).observe($('#app'));
   afterChange(); sizeTimeline();

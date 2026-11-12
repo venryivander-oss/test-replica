@@ -12,3 +12,7 @@
 - Tahap 3 — 2026-11-12 — done. Chroma key + pipet, mask, 8 blend mode (salin latar ke tekstur lalu campur di shader), stiker emoji/bentuk, gaya teks lengkap, animasi masuk/keluar/berulang, 9 template judul.
   - Font Google dimuat dari 4 berkas CSS terpisah (28 keluarga); tidak bisa diverifikasi di lingkungan uji karena fonts.googleapis.com diblokir.
   - Belum ada: pegangan mask di pratinjau, wipe per-lapisan untuk animasi teks.
+- Tahap 4 — 2026-11-12 — done. Fade, pisah audio, EQ 3 pita, pitch/pengubah suara (pratinjau & ekspor memakai rantai node yang sama), penanda ketukan, editor caption + SRT, auto-scroll saat menyeret, daftar pintasan.
+  - Diverifikasi dengan analisis hasil mix: sinus 440 Hz menjadi 880 Hz (+12) dan 220 Hz (−12); fade dan EQ menurunkan RMS sesuai harapan.
+  - Semua tes tahap 1–3 dijalankan ulang dan lolos.
+  - Sisa yang belum ada: pegangan mask di pratinjau, kurva kecepatan gambar-sendiri, pindah klip antar-trek manual, gaya caption per baris, crossfade audio di transisi. Belum diuji di perangkat iOS/Android asli.
