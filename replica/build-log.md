@@ -16,3 +16,6 @@
   - Diverifikasi dengan analisis hasil mix: sinus 440 Hz menjadi 880 Hz (+12) dan 220 Hz (−12); fade dan EQ menurunkan RMS sesuai harapan.
   - Semua tes tahap 1–3 dijalankan ulang dan lolos.
   - Sisa yang belum ada: pegangan mask di pratinjau, kurva kecepatan gambar-sendiri, pindah klip antar-trek manual, gaya caption per baris, crossfade audio di transisi. Belum diuji di perangkat iOS/Android asli.
+- Perbaikan impor — 2026-11-13. Laporan pengguna: impor video tidak jalan (perangkat belum diketahui). Tidak bisa direproduksi di Chromium.
+  - Diperkuat: elemen video kini ada di DOM dan diputar bisu sebentar agar metadata/frame dimuat (kebutuhan iOS), input berkas tidak lagi display:none, berkas tanpa tipe/ekstensi dicoba sebagai video lalu foto, video tanpa gambar terdekode (HEVC) dilaporkan jelas, semua kegagalan tampil di dialog.
+  - Diuji lewat jalur pemilih berkas asli di Chromium tanpa flag autoplay. WebKit/iOS tetap belum teruji.

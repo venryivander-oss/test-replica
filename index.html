@@ -36,6 +36,7 @@ button:disabled{opacity:.35;cursor:default}
 svg.ic{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
 svg.ic.fill{fill:currentColor;stroke:none}
 [hidden]{display:none!important}
+.vh{position:fixed;left:-9999px;top:0;width:1px;height:1px;opacity:0}
 
 /* ============ LAYOUT ============ */
 #app{height:100vh;height:100dvh;display:flex;flex-direction:column;user-select:none;-webkit-user-select:none;
@@ -185,7 +186,7 @@ textarea{width:100%;background:var(--surface-2);border:1px solid var(--line);bor
 </div>
 <div class="modal" id="modal" hidden><div class="modal-c" id="modalC" role="dialog" aria-modal="true"></div></div>
 <div id="toast" role="status"></div>
-<input type="file" id="file" multiple hidden>
+<input type="file" id="file" class="vh" multiple tabindex="-1" aria-hidden="true">
 
 <script>
 'use strict';
@@ -467,19 +468,26 @@ function kindOf(file) {
   if (t.startsWith('image') || /\.(jpe?g|png|webp|gif|avif|bmp)$/.test(n)) return 'image';
   return null;
 }
+function mediaErr(v) { const c = v.error && v.error.code; return c === 4 ? 'format atau codec tidak didukung browser ini' : c === 3 ? 'berkas rusak atau codec-nya tidak didukung' : 'berkas tidak bisa dibaca'; }
+const quietPlay = v => { try { const p = v.play(); if (p && p.catch) p.catch(() => {}); } catch (e) {} };
 function probeAV(m) {
   return new Promise((res, rej) => {
     const v = document.createElement(m.kind === 'audio' ? 'audio' : 'video');
-    v.preload = 'metadata'; v.muted = true; v.playsInline = true;
-    const to = setTimeout(() => rej(new Error('timeout')), 15000);
-    v.onloadedmetadata = async () => {
-      if (!isFinite(v.duration)) { v.currentTime = 1e7; await new Promise(r => { v.ondurationchange = r; setTimeout(r, 3000); }); }
+    v.preload = 'auto'; v.muted = true; v.playsInline = true; v.setAttribute('playsinline', ''); v.setAttribute('muted', '');
+    v.className = 'vh'; document.body.append(v);          // elemen harus ada di halaman agar sebagian browser HP mau memuatnya
+    let done = false;
+    const finish = err => { if (done) return; done = true; clearTimeout(to); clearTimeout(kick); try { v.pause(); } catch (e) {} v.removeAttribute('src'); try { v.load(); } catch (e) {} v.remove(); err ? rej(err) : res(); };
+    const to = setTimeout(() => finish(new Error('waktu habis saat membaca berkas')), 20000);
+    const kick = setTimeout(() => quietPlay(v), 1200);    // iOS: metadata sering baru dimuat setelah diputar (bisu)
+    v.addEventListener('loadedmetadata', async () => {
+      clearTimeout(kick);
+      if (!isFinite(v.duration)) { v.currentTime = 1e7; await new Promise(r => { v.ondurationchange = r; setTimeout(r, 3000); }); try { v.currentTime = 0; } catch (e) {} }
+      if (m.kind === 'video' && !v.videoWidth) { quietPlay(v); await new Promise(r => { v.addEventListener('loadeddata', r, { once: true }); v.addEventListener('resize', r, { once: true }); setTimeout(r, 2500); }); }
       m.duration = isFinite(v.duration) ? v.duration : 0; m.w = v.videoWidth || 0; m.h = v.videoHeight || 0;
-      clearTimeout(to); v.removeAttribute('src'); try { v.load(); } catch (e) {}
-      m.duration > 0 ? res() : rej(new Error('durasi tidak terbaca'));
-    };
-    v.onerror = () => { clearTimeout(to); rej(new Error('format tidak didukung')); };
-    v.src = m.url;
+      finish(m.duration > 0 ? null : new Error('durasi tidak terbaca'));
+    }, { once: true });
+    v.addEventListener('error', () => finish(new Error(mediaErr(v))), { once: true });
+    v.src = m.url; try { v.load(); } catch (e) {}
   });
 }
 async function loadImage(m) {
@@ -493,8 +501,9 @@ async function loadImage(m) {
 async function makeThumbs(m) {
   if (m.kind !== 'video') return;
   try {
-    const v = document.createElement('video'); v.muted = true; v.playsInline = true; v.preload = 'auto'; v.src = m.url;
-    await new Promise((res, rej) => { v.onloadeddata = res; v.onerror = rej; setTimeout(res, 5000); });
+    const v = document.createElement('video'); v.muted = true; v.playsInline = true; v.setAttribute('playsinline', ''); v.preload = 'auto'; v.className = 'vh'; document.body.append(v); v.src = m.url;
+    quietPlay(v);   // iOS baru mendekode frame setelah video pernah diputar
+    await new Promise((res, rej) => { v.onloadeddata = res; v.onerror = rej; setTimeout(res, 5000); }); v.pause();
     const n = clamp(Math.ceil(m.duration), 1, 30); m.thumbs = []; m.thumbStep = m.duration / n;
     const th = 72, tw = Math.max(8, Math.round(th * m.w / m.h));
     for (let i = 0; i < n; i++) {
@@ -504,7 +513,7 @@ async function makeThumbs(m) {
       try { c.getContext('2d').drawImage(v, 0, 0, tw, th); m.thumbs[i] = c; } catch (e) {}
       requestRender();
     }
-    v.removeAttribute('src'); try { v.load(); } catch (e) {}
+    v.removeAttribute('src'); try { v.load(); } catch (e) {} v.remove();
   } catch (e) { console.warn('thumbnail gagal', e); }
 }
 let decodeCtx;
@@ -528,27 +537,34 @@ async function registerMedia(m) {       // lengkapi objek media (baru atau hasil
   m.url = URL.createObjectURL(m.blob);
   if (m.kind === 'image') await loadImage(m);
   else if (!m.duration) await probeAV(m);
-  if (m.kind === 'video' && !m.w) m.kind = 'audio';
+  if (m.kind === 'video' && !m.w) { m.kind = 'audio'; m.noPicture = true; }
   S.media.set(m.id, m);
   if (m.kind === 'video') makeThumbs(m);
   if (m.kind === 'audio') makePeaks(m);
 }
 async function importFiles(files, only) {
-  let added = 0, lastId = null; if (files.length) toast('Membuka berkas…');
+  let added = 0; const issues = []; if (files.length) toast('Membuka berkas…');
   for (const f of files) {
-    const kind = kindOf(f);
-    if (!kind || (only && kind !== only)) { toast(`"${f.name}" dilewati: jenis berkas tidak cocok`); continue; }
-    const m = { id: uid(), kind, name: f.name || kind, blob: f };
-    try { await registerMedia(m); } catch (e) { toast(`"${m.name}" tidak bisa dibuka (${e.message})`); continue; }
-    saveMedia(m);
-    if (m.kind === 'audio') {
-      const c = baseClip('audio', { mediaId: m.id, start: S.time, dur: m.duration }); placeClip(c, 'audio'); lastId = c.id;
-    } else {
-      const c = baseClip(m.kind, { mediaId: m.id, dur: m.kind === 'video' ? m.duration : 3 }); mainTrack().clips.push(c); lastId = c.id;
+    const name = f.name || 'berkas', known = kindOf(f);
+    if (known && only && known !== only && !(only === 'audio' && known === 'video')) { issues.push(`${name}: bukan berkas ${only}`); continue; }
+    // jenis tidak dikenali (nama/tipe kosong dari sebagian pemilih berkas Android): coba sebagai video, lalu sebagai foto
+    let m = null, err = null;
+    for (const kind of known ? [known] : ['video', 'image']) {
+      const cand = { id: uid(), kind, name, blob: f };
+      try { await registerMedia(cand); m = cand; break; } catch (e) { err = e; if (cand.url) URL.revokeObjectURL(cand.url); }
     }
+    if (!m) { issues.push(`${name}: ${!known ? 'bukan video, foto, atau audio yang bisa dibaca' : known === 'image' ? 'gambar tidak bisa dibaca' : err && err.message || 'tidak bisa dibuka'}`); continue; }
+    if (m.noPicture && only !== 'audio') issues.push(`${name}: gambar videonya tidak bisa didekode browser ini (biasanya karena codec HEVC/H.265), jadi hanya suaranya yang ditambahkan`);
+    saveMedia(m);
+    if (m.kind === 'audio') placeClip(baseClip('audio', { mediaId: m.id, start: S.time, dur: m.duration }), 'audio');
+    else mainTrack().clips.push(baseClip(m.kind, { mediaId: m.id, dur: m.kind === 'video' ? m.duration : 3 }));
     added++;
   }
   if (added) { commit(); toast(added + ' berkas ditambahkan'); }
+  if (issues.length) {
+    const ul = h('ul', { class: 'hint', style: 'margin:0;padding-left:var(--sp-4);user-select:text;-webkit-user-select:text' }); issues.forEach(t => ul.append(h('li', {}, t)));
+    showModal(h('h2', {}, 'Ada berkas yang bermasalah'), ul, h('p', { class: 'hint' }, 'Kalau videonya tidak terbaca, ubah dulu ke MP4 dengan codec H.264, lalu impor lagi.'), h('div', { class: 'row' }, h('div', { class: 'grow' }), h('button', { class: 'btn big', onclick: hideModal }, 'Tutup')));
+  }
 }
 function pickFiles(accept, only) {
   const inp = $('#file'); inp.accept = accept; inp.value = '';
@@ -615,8 +631,13 @@ function getPlayer(clip, track) {
   if (!p) {
     const m = mediaOf(clip);
     const el = document.createElement(m.kind === 'audio' ? 'audio' : 'video');
-    el.playsInline = true; el.setAttribute('playsinline', ''); el.preload = 'auto'; el.src = m.url;
-    p = { el, key, mediaId: m.id, tex: null, ok: false };
+    el.playsInline = true; el.setAttribute('playsinline', ''); el.preload = 'auto'; el.className = 'vh'; document.body.append(el); el.src = m.url;
+    p = { el, key, mediaId: m.id, tex: null, ok: false, warming: false };
+    if (m.kind === 'video' && !S.playing) {
+      p.warming = true; el.muted = true;
+      const end = () => { if (!p.warming) return; p.warming = false; if (!S.playing) el.pause(); el.muted = false; requestRender(); };
+      el.addEventListener('loadeddata', end, { once: true }); setTimeout(end, 1500); quietPlay(el);
+    }
     el.addEventListener('seeked', requestRender);
     el.addEventListener('loadeddata', requestRender);
     players.set(key, p); wirePlayer(p);
@@ -641,7 +662,7 @@ function syncPlayers(t, playing) {
   const active = new Set();
   for (const { clip, track, ghost } of activeAV(t)) {
     const p = getPlayer(clip, track), el = p.el, want = srcTime(clip, t), hold = ghost || !!clip.reverse;
-    active.add(p);
+    active.add(p); if (p.warming && !playing) continue;
     setVol(p, clip.muted || hold ? 0 : effVol(clip, t)); if (p.chain) p.chain.set(clip);
     if (playing && !hold) {
       try { const r = clamp(instSpeed(clip, t - clip.start), 0.1, 10); if (Math.abs(el.playbackRate - r) > 0.01) el.playbackRate = r; } catch (e) {}
@@ -655,7 +676,7 @@ function syncPlayers(t, playing) {
   players.forEach(p => { if (!active.has(p) && !p.el.paused) p.el.pause(); });
 }
 function prunePlayers() {
-  players.forEach((p, k) => { if (!S.media.has(p.mediaId)) { p.el.pause(); p.el.removeAttribute('src'); players.delete(k); } });
+  players.forEach((p, k) => { if (!S.media.has(p.mediaId)) { p.el.pause(); p.el.removeAttribute('src'); p.el.remove(); players.delete(k); } });
 }
 
 /* ---------- WebGL compositor: shader lapisan (warna, blur, wipe) + shader pasca (efek) ---------- */
